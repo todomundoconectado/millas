@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx claude-code-templates@latest --skill development/brainstorming,creative-design/frontend-design,development/skill-creator,development/senior-frontend,business-marketing/copywriting)",
+      "Bash(npm show:*)",
+      "Bash(npx -y @anthropic-ai/stitch-mcp@latest --help)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('description',''\\), '\\\\n', d.get\\('bin',''\\), '\\\\n', d.get\\('main',''\\)\\)\")",
+      "Bash(npx -y stitch-mcp@latest --help)",
+      "Bash(curl -sL \"https://stitch.withanthropics.com/api/projects/6250908755988446812\")",
+      "Bash(curl -sL \"https://www.stitch.withanthropics.com/api/projects/6250908755988446812\")",
+      "WebFetch(domain:stitch.withanthropics.com)",
+      "WebFetch(domain:labs.google)",
+      "WebFetch(domain:stitch.google.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(cd /tmp)",
+      "Bash(npm pack:*)",
+      "Bash(tar xzf:*)",
+      "Read(//tmp/package/**)",
+      "Bash(gcloud auth:*)",
+      "Bash(gcloud.cmd auth:*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"$PATH:/c/Users/vibor/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin\")",
+      "Bash(gcloud --version)",
+      "Bash(cmd.exe /c start \"https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fsdk.cloud.google.com%2Fapplicationdefaultauthcode.html&scope=openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fsqlservice.login&state=H5aN8qIhHIroM4yK2t0nBFWQm0ynZ8&prompt=consent&token_usage=remote&access_type=offline&code_challenge=Pzc_u6xZZtH57VZIap-rjOzHV6aYwtf54SvclqENlpE&code_challenge_method=S256\")",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --yes)"
+    ]
+  }
+}
