@@ -1,26 +1,165 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* ── Fontes ── */
+  --font-headline: 'Manrope', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-label: 'Inter', sans-serif;
+
+  /* ── Border Radius ── */
+  --radius-sm: 0.125rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
+
+  /* ── Cores Material Design 3 (do Stitch) ── */
+  --color-primary: #206223;
+  --color-primary-container: #3a7b3a;
+  --color-primary-fixed: #acf4a4;
+  --color-primary-fixed-dim: #91d78a;
+  --color-on-primary: #ffffff;
+  --color-on-primary-fixed: #002203;
+  --color-on-primary-fixed-variant: #0c5216;
+  --color-on-primary-container: #cbffc2;
+  --color-inverse-primary: #91d78a;
+
+  --color-secondary: #4c616c;
+  --color-secondary-container: #cfe6f2;
+  --color-secondary-fixed: #cfe6f2;
+  --color-secondary-fixed-dim: #b4cad6;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-fixed: #071e27;
+  --color-on-secondary-fixed-variant: #354a53;
+  --color-on-secondary-container: #526772;
+
+  --color-tertiary: #923357;
+  --color-tertiary-container: #b14b6f;
+  --color-tertiary-fixed: #ffd9e2;
+  --color-tertiary-fixed-dim: #ffb1c7;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-fixed: #3f001c;
+  --color-on-tertiary-fixed-variant: #7f2448;
+  --color-on-tertiary-container: #ffedf0;
+
+  --color-surface: #f9f9f9;
+  --color-surface-dim: #dadada;
+  --color-surface-bright: #f9f9f9;
+  --color-surface-container: #eeeeee;
+  --color-surface-container-low: #f3f3f3;
+  --color-surface-container-high: #e8e8e8;
+  --color-surface-container-highest: #e2e2e2;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-variant: #e2e2e2;
+  --color-surface-tint: #2a6b2c;
+  --color-on-surface: #1a1c1c;
+  --color-on-surface-variant: #40493d;
+  --color-inverse-surface: #2f3131;
+  --color-inverse-on-surface: #f1f1f1;
+
+  --color-background: #f9f9f9;
+  --color-on-background: #1a1c1c;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+
+  --color-outline: #707a6c;
+  --color-outline-variant: #bfcaba;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-headline);
+}
+
+/* ── Glass Nav ── */
+.glass-nav {
+  background: rgba(249, 249, 249, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(191, 202, 186, 0.2);
+}
+
+/* ── Gradiente CTA primário ── */
+.btn-primary-gradient {
+  background: linear-gradient(135deg, #206223, #3a7b3a);
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+.btn-primary-gradient:hover { opacity: 0.92; }
+.btn-primary-gradient:active { transform: scale(0.98); }
+
+/* ── Product Card ── */
+.product-card {
+  transition: background-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.product-card:hover {
+  background-color: var(--color-surface-container-high);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(7, 30, 39, 0.08);
+}
+
+/* ── Category Card ── */
+.category-card .category-img {
+  transition: transform 0.5s ease;
+}
+.category-card:hover .category-img {
+  transform: scale(1.05);
+}
+
+/* ── Scrollbar (webkit) ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-surface-container-low); }
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 9999px;
+}
+
+/* ── Focus ── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Print — Folha de Separação ── */
+@media print {
+  body > *:not(#picking-sheet) { display: none !important; }
+  #picking-sheet {
+    display: block !important;
+    position: absolute;
+    left: 0; top: 0; width: 100%;
+    font-size: 14px; color: #000;
+  }
+  #picking-sheet table { width: 100%; border-collapse: collapse; }
+  #picking-sheet th,
+  #picking-sheet td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; }
+  #picking-sheet th { background: #f0f0f0; font-weight: 700; font-size: 13px; text-transform: uppercase; }
+}
+
+/* ── Material Symbols ── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+  line-height: 1;
+  vertical-align: middle;
+}
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
