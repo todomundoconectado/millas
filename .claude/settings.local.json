@@ -55,7 +55,17 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/produtos)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/produtos/sabonete-protex-85g-erva-doce)",
       "Bash(curl -s http://localhost:3000/produtos)",
-      "Bash(nslookup srv1782.hstgr.io)"
+      "Bash(nslookup srv1782.hstgr.io)",
+      "Bash(node -e \"require\\('bcryptjs'\\).hash\\('Millas2026!', 12\\).then\\(console.log\\)\")",
+      "Bash(cp \"src/app/\\(admin\\)/admin/layout.tsx\" \"src/app/\\(admin\\)/admin/\\(dashboard\\)/layout.tsx\")",
+      "Bash(cp \"src/app/\\(admin\\)/admin/page.tsx\" \"src/app/\\(admin\\)/admin/\\(dashboard\\)/page.tsx\")",
+      "Bash(cp \"src/app/\\(admin\\)/admin/banners/page.tsx\" \"src/app/\\(admin\\)/admin/\\(dashboard\\)/banners/page.tsx\")",
+      "Bash(cp \"src/app/\\(admin\\)/admin/categorias/page.tsx\" \"src/app/\\(admin\\)/admin/\\(dashboard\\)/categorias/page.tsx\")",
+      "Bash(cp \"src/app/\\(admin\\)/admin/cupons/page.tsx\" \"src/app/\\(admin\\)/admin/\\(dashboard\\)/cupons/page.tsx\")",
+      "Bash(rm \"src/app/\\(admin\\)/admin/layout.tsx\" \"src/app/\\(admin\\)/admin/page.tsx\" \"src/app/\\(admin\\)/admin/banners/page.tsx\" \"src/app/\\(admin\\)/admin/categorias/page.tsx\" \"src/app/\\(admin\\)/admin/cupons/page.tsx\" \"src/app/\\(admin\\)/admin/pedidos/page.tsx\" \"src/app/\\(admin\\)/admin/produtos/page.tsx\" \"src/app/\\(admin\\)/admin/promocoes/page.tsx\")",
+      "Bash(rmdir \"src/app/\\(admin\\)/admin/banners\" \"src/app/\\(admin\\)/admin/categorias\" \"src/app/\\(admin\\)/admin/cupons\" \"src/app/\\(admin\\)/admin/pedidos\" \"src/app/\\(admin\\)/admin/produtos\" \"src/app/\\(admin\\)/admin/promocoes\")",
+      "Bash(cp -r \"src/app/\\(admin\\)/admin/produtos/novo\" \"src/app/\\(admin\\)/admin/\\(dashboard\\)/produtos/novo\")",
+      "Bash(rm -rf \"src/app/\\(admin\\)/admin/layout.tsx\" \"src/app/\\(admin\\)/admin/page.tsx\" \"src/app/\\(admin\\)/admin/banners\" \"src/app/\\(admin\\)/admin/categorias\" \"src/app/\\(admin\\)/admin/cupons\" \"src/app/\\(admin\\)/admin/pedidos\" \"src/app/\\(admin\\)/admin/produtos\" \"src/app/\\(admin\\)/admin/promocoes\")"
     ]
   }
 }
