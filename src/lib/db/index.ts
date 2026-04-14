@@ -11,7 +11,6 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   waitForConnections: true,
   queueLimit: 0,
-  family: 4,  // forçar IPv4
 })
 
 export const db = drizzle(pool, { schema, mode: 'default' })
