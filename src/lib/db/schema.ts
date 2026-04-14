@@ -20,6 +20,19 @@ export const orderStatuses = ['pendente', 'confirmado', 'separando', 'saiu_entre
 export const paymentTypes = ['pix', 'cartao', 'boleto'] as const
 export const paymentStatuses = ['aguardando', 'aprovado', 'recusado', 'reembolsado'] as const
 export const scheduledFields = ['preco', 'preco_de', 'estoque', 'ativo'] as const
+export const userRoles = ['admin', 'operador'] as const
+
+// ── Users ──────────────────────────────────────────────────────────────────
+
+export const users = mysqlTable('users', {
+  id: int('id').autoincrement().primaryKey(),
+  nome: varchar('nome', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  role: mysqlEnum('role', userRoles).notNull().default('operador'),
+  ativo: boolean('ativo').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
 
 // ── Categories ─────────────────────────────────────────────────────────────
 
@@ -183,6 +196,7 @@ export const scheduledUpdates = mysqlTable('scheduled_updates', {
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+export type User = typeof users.$inferSelect
 export type Category = typeof categories.$inferSelect
 export type NewCategory = typeof categories.$inferInsert
 export type Product = typeof products.$inferSelect

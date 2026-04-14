@@ -1,9 +1,10 @@
 import type { NextAuthConfig } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
+import { db } from '@/lib/db'
+import { users } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 
-// Admin credentials — store hashed password in env, never plain text
-// Generate with: node -e "require('bcryptjs').hash('yourpassword', 12).then(console.log)"
 export const authConfig: NextAuthConfig = {
   pages: {
     signIn: '/admin/login',
@@ -28,12 +29,14 @@ export const authConfig: NextAuthConfig = {
     jwt({ token, user }) {
       if (user) {
         token.role = user.role
+        token.id = user.id
       }
       return token
     },
     session({ session, token }) {
       if (token && session.user) {
         session.user.role = token.role as string
+        session.user.id = token.id as string
       }
       return session
     },
@@ -47,25 +50,29 @@ export const authConfig: NextAuthConfig = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const adminEmail = process.env.ADMIN_EMAIL
-        const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(and(
+            eq(users.email, credentials.email as string),
+            eq(users.ativo, true)
+          ))
+          .limit(1)
 
-        if (!adminEmail || !adminPasswordHash) return null
-
-        if (credentials.email !== adminEmail) return null
+        if (!user) return null
 
         const valid = await bcrypt.compare(
           credentials.password as string,
-          adminPasswordHash
+          user.passwordHash
         )
 
         if (!valid) return null
 
         return {
-          id: '1',
-          email: adminEmail,
-          name: 'Administrador',
-          role: 'admin',
+          id: String(user.id),
+          email: user.email,
+          name: user.nome,
+          role: user.role,
         }
       },
     }),
