@@ -34,29 +34,40 @@ export const authConfig: NextAuthConfig = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(and(
-            eq(users.email, credentials.email as string),
-            eq(users.ativo, true)
-          ))
-          .limit(1)
+        try {
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(and(
+              eq(users.email, credentials.email as string),
+              eq(users.ativo, true)
+            ))
+            .limit(1)
 
-        if (!user) return null
+          if (!user) {
+            console.log('[AUTH] Usuário não encontrado:', credentials.email)
+            return null
+          }
 
-        const valid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        )
+          const valid = await bcrypt.compare(
+            credentials.password as string,
+            user.passwordHash
+          )
 
-        if (!valid) return null
+          if (!valid) {
+            console.log('[AUTH] Senha incorreta para:', credentials.email)
+            return null
+          }
 
-        return {
-          id: String(user.id),
-          email: user.email,
-          name: user.nome,
-          role: user.role,
+          return {
+            id: String(user.id),
+            email: user.email,
+            name: user.nome,
+            role: user.role,
+          }
+        } catch (err) {
+          console.error('[AUTH] Erro de banco de dados:', err)
+          return null
         }
       },
     }),
