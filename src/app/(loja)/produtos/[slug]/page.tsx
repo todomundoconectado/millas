@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
-import { getProductBySlug, listRelated } from '@/lib/db/queries/products'
+import { getProductBySlug } from '@/lib/db/queries/products'
+import { getRecommendations } from '@/lib/db/queries/recommendations'
 import ProductCard from '@/components/loja/ProductCard'
 import AddToCartPanel from '@/components/loja/AddToCartPanel'
 
@@ -23,7 +24,7 @@ export default async function ProdutoDetalhe({ params }: Props) {
   const produto = await getProductBySlug(slug)
   if (!produto) notFound()
 
-  const relacionados = await listRelated(produto.categoriaId, produto.id)
+  const relacionados = await getRecommendations(produto.id, produto.categoriaId)
   const imagens = (produto.imagens as string[]) ?? []
 
   return (

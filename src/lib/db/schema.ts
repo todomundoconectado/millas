@@ -10,6 +10,7 @@ import {
   index,
   mysqlEnum,
   mediumtext,
+  primaryKey,
 } from 'drizzle-orm/mysql-core'
 
 // ── Enums ──────────────────────────────────────────────────────────────────
@@ -194,6 +195,22 @@ export const scheduledUpdates = mysqlTable('scheduled_updates', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+// ── Product Affinities (recomendações por co-compra) ──────────────────────
+
+export const productAffinities = mysqlTable(
+  'product_affinities',
+  {
+    productId: int('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+    affineProductId: int('affine_product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+    score: decimal('score', { precision: 10, scale: 4 }).notNull().default('0'),
+    updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.productId, t.affineProductId] }),
+    index('product_affinities_product_id_idx').on(t.productId),
+  ]
+)
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect
@@ -208,3 +225,4 @@ export type NewOrder = typeof orders.$inferInsert
 export type OrderItem = typeof orderItems.$inferSelect
 export type Banner = typeof banners.$inferSelect
 export type ScheduledUpdate = typeof scheduledUpdates.$inferSelect
+export type ProductAffinity = typeof productAffinities.$inferSelect

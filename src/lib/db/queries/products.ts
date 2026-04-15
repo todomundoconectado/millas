@@ -1,8 +1,26 @@
 import { db } from '@/lib/db'
 import { products, categories } from '@/lib/db/schema'
-import { eq, and, like, lte, isNotNull, desc, sql } from 'drizzle-orm'
+import { eq, and, like, isNotNull, desc, sql, inArray } from 'drizzle-orm'
 
 export const PER_PAGE = 24
+
+/** BFS: retorna todos os IDs descendentes de uma categoria (inclusive ela mesma) */
+async function collectCategoryIds(slug: string): Promise<number[]> {
+  const allCats = await db.select({ id: categories.id, slug: categories.slug, parentId: categories.parentId }).from(categories)
+  const root = allCats.find(c => c.slug === slug)
+  if (!root) return []
+
+  const ids: number[] = []
+  const queue = [root.id]
+  while (queue.length) {
+    const current = queue.shift()!
+    ids.push(current)
+    for (const c of allCats) {
+      if (c.parentId === current) queue.push(c.id)
+    }
+  }
+  return ids
+}
 
 export async function listProducts(opts: {
   categoriaSlug?: string
@@ -12,21 +30,17 @@ export async function listProducts(opts: {
 }) {
   const { categoriaSlug, busca, precoMax, pagina = 1 } = opts
 
-  // Resolver categoria → id
-  let categoriaId: number | undefined
+  // Resolver categoria → IDs (pai + todos os filhos via BFS)
+  let categoriaIds: number[] = []
   if (categoriaSlug) {
-    const [cat] = await db
-      .select({ id: categories.id })
-      .from(categories)
-      .where(eq(categories.slug, categoriaSlug))
-      .limit(1)
-    if (cat) categoriaId = cat.id
+    categoriaIds = await collectCategoryIds(categoriaSlug)
   }
 
   const conditions = [eq(products.ativo, true)]
-  if (categoriaId)  conditions.push(eq(products.categoriaId, categoriaId))
-  if (busca)        conditions.push(like(products.nome, `%${busca}%`))
-  if (precoMax)     conditions.push(sql`CAST(${products.preco} AS DECIMAL) <= ${precoMax}`)
+  if (categoriaIds.length === 1) conditions.push(eq(products.categoriaId, categoriaIds[0]))
+  else if (categoriaIds.length > 1) conditions.push(inArray(products.categoriaId, categoriaIds))
+  if (busca)    conditions.push(like(products.nome, `%${busca}%`))
+  if (precoMax) conditions.push(sql`CAST(${products.preco} AS DECIMAL) <= ${precoMax}`)
 
   const where = and(...conditions)
 
@@ -69,7 +83,7 @@ export async function getProductBySlug(slug: string) {
     })
     .from(products)
     .leftJoin(categories, eq(products.categoriaId, categories.id))
-    .where(and(eq(products.slug, slug), eq(products.ativo, true)))
+    .where(eq(products.slug, slug))
     .limit(1)
 
   return produto ?? null
