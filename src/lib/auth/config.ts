@@ -10,22 +10,6 @@ export const authConfig: NextAuthConfig = {
     signIn: '/admin/login',
   },
   callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user
-      const isAdminRoute = nextUrl.pathname.startsWith('/admin')
-      const isLoginPage = nextUrl.pathname === '/admin/login'
-
-      if (isAdminRoute && !isLoginPage) {
-        if (!isLoggedIn) {
-          const loginUrl = new URL('/admin/login', nextUrl)
-          loginUrl.searchParams.set('redirect', nextUrl.pathname)
-          return Response.redirect(loginUrl)
-        }
-        return true
-      }
-
-      return true
-    },
     jwt({ token, user }) {
       if (user) {
         token.role = user.role
