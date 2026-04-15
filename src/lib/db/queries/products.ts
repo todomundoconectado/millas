@@ -4,6 +4,18 @@ import { eq, and, like, isNotNull, desc, sql, inArray } from 'drizzle-orm'
 
 export const PER_PAGE = 24
 
+/**
+ * Normaliza o campo `imagens` que pode vir do mysql2 como string JSON ou array.
+ * O driver mysql2 no Hostinger não faz typeCast automático de colunas JSON.
+ */
+function parseImagens(v: unknown): string[] {
+  if (Array.isArray(v)) return v as string[]
+  if (typeof v === 'string') {
+    try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }
+  }
+  return []
+}
+
 /** BFS: retorna todos os IDs descendentes de uma categoria (inclusive ela mesma) */
 async function collectCategoryIds(slug: string): Promise<number[]> {
   const allCats = await db.select({ id: categories.id, slug: categories.slug, parentId: categories.parentId }).from(categories)
@@ -58,7 +70,7 @@ export async function listProducts(opts: {
     .offset((pagina - 1) * PER_PAGE)
 
   return {
-    produtos: rows,
+    produtos: rows.map(r => ({ ...r, imagens: parseImagens(r.imagens) })),
     total: Number(total),
     paginas: Math.ceil(Number(total) / PER_PAGE),
   }
@@ -86,21 +98,24 @@ export async function getProductBySlug(slug: string) {
     .where(eq(products.slug, slug))
     .limit(1)
 
-  return produto ?? null
+  console.log('[getProductBySlug]', slug, '→', produto ? 'found' : 'null')
+  if (!produto) return null
+  return { ...produto, imagens: parseImagens(produto.imagens) }
 }
 
 export async function listOffers(limit = 8) {
-  return db
+  const rows = await db
     .select()
     .from(products)
     .where(and(eq(products.ativo, true), isNotNull(products.precoDe)))
     .orderBy(desc(products.createdAt))
     .limit(limit)
+  return rows.map(r => ({ ...r, imagens: parseImagens(r.imagens) }))
 }
 
 export async function listRelated(categoriaId: number | null, excludeId: number, limit = 4) {
   if (!categoriaId) return []
-  return db
+  const rows = await db
     .select()
     .from(products)
     .where(
@@ -112,6 +127,7 @@ export async function listRelated(categoriaId: number | null, excludeId: number,
     )
     .orderBy(desc(products.createdAt))
     .limit(limit)
+  return rows.map(r => ({ ...r, imagens: parseImagens(r.imagens) }))
 }
 
 export type ProductRow = typeof products.$inferSelect

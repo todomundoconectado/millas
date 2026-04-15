@@ -39,7 +39,7 @@ export default async function ProdutoDetalhe({ params }: Props) {
   } catch {
     // product_affinities table may not exist yet — degrade gracefully
   }
-  const imagens = (produto.imagens as string[]) ?? []
+  const imagens = produto.imagens
 
   return (
     <div className="max-w-screen-xl mx-auto px-4 md:px-8 py-8 md:py-12">
@@ -155,7 +155,7 @@ export default async function ProdutoDetalhe({ params }: Props) {
                 slug={p.slug}
                 preco={p.preco}
                 precoDe={p.precoDe}
-                imagens={(p.imagens as string[]) ?? []}
+                imagens={p.imagens}
                 isKg={p.isKg}
               />
             ))}

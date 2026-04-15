@@ -162,7 +162,7 @@ export default async function HomePage() {
                   slug={p.slug}
                   preco={p.preco}
                   precoDe={p.precoDe}
-                  imagens={(p.imagens as string[]) ?? []}
+                  imagens={p.imagens}
                   isKg={p.isKg}
                   badge="Oferta"
                 />

@@ -87,7 +87,7 @@ export default async function AdminProdutos({ searchParams }: Props) {
     estoque: String(p.estoque),
     ativo: p.ativo,
     isKg: p.isKg,
-    imagens: (p.imagens as string[]) ?? [],
+    imagens: p.imagens,
     categoriaNome: p.categoriaNome ?? null,
   }))
 

@@ -150,7 +150,7 @@ export default async function ProdutosPage({ searchParams }: ProdutosPageProps) 
                     slug={p.slug}
                     preco={p.preco}
                     precoDe={p.precoDe}
-                    imagens={(p.imagens as string[]) ?? []}
+                    imagens={p.imagens}
                     isKg={p.isKg}
                     badge={p.precoDe ? 'Oferta' : undefined}
                   />
