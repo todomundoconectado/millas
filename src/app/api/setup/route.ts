@@ -13,8 +13,10 @@ export async function GET() {
   try {
     await db.execute(sql`SELECT 1`)
     log.push('✅ DB connection OK')
-  } catch (err) {
-    log.push(`❌ DB connection FAILED: ${err}`)
+  } catch (err: unknown) {
+    const e = err as { message?: string; cause?: { code?: string; errno?: number; message?: string } }
+    log.push(`❌ DB connection FAILED: ${e.message}`)
+    log.push(`❌ Causa: code=${e.cause?.code} errno=${e.cause?.errno} msg=${e.cause?.message}`)
     return NextResponse.json({ log }, { status: 500 })
   }
 
