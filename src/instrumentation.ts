@@ -1,60 +1,60 @@
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    process.on('uncaughtException', (err) => {
-      console.error('[CRASH] uncaughtException:', err)
-    })
-    process.on('unhandledRejection', (reason) => {
-      console.error('[CRASH] unhandledRejection:', reason)
-    })
+  // Roda apenas no servidor Node.js (não em Edge)
+  if (process.env.NEXT_RUNTIME === 'edge') return
 
+  console.log('[BOOT] Instrumentation register() chamado. NEXT_RUNTIME =', process.env.NEXT_RUNTIME)
+
+  const mysql = await import('mysql2/promise')
+
+  const baseConfig = {
+    port: parseInt(process.env.DB_PORT ?? '3306'),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    connectTimeout: 5000,
+  }
+
+  // Tenta cada host em sequência até um funcionar
+  const hosts = [
+    process.env.DB_HOST,
+    'localhost',
+    '127.0.0.1',
+  ].filter(Boolean) as string[]
+
+  let connected = false
+  for (const host of hosts) {
     try {
-      const { db } = await import('@/lib/db')
-      const { users } = await import('@/lib/db/schema')
-      const { eq } = await import('drizzle-orm')
-      const bcrypt = await import('bcryptjs')
-      const { sql } = await import('drizzle-orm')
+      const conn = await mysql.createConnection({ ...baseConfig, host })
+      await conn.query('SELECT 1')
+      await conn.end()
+      console.log(`[DB] Conectado via host="${host}" ✓`)
+      connected = true
+      break
+    } catch (err: unknown) {
+      const e = err as { code?: string; errno?: number; message?: string }
+      console.error(`[DB] host="${host}" falhou → code=${e.code} errno=${e.errno} msg=${e.message}`)
+    }
+  }
 
-      // Teste de conexão
-      await db.execute(sql`SELECT 1`)
-      console.log('[DB] Conexão OK')
-
-      // Garante que o admin existe com credenciais corretas
-      const adminEmail = 'contato@millas.com.br'
-      const adminSenha = 'Millas2026!'
-      const hash = await bcrypt.default.hash(adminSenha, 12)
-
-      const [existing] = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.email, adminEmail))
-        .limit(1)
-
-      if (existing) {
-        await db
-          .update(users)
-          .set({ passwordHash: hash, ativo: true, role: 'admin' })
-          .where(eq(users.email, adminEmail))
-        console.log('[AUTH] Admin atualizado:', adminEmail)
-      } else {
-        await db.insert(users).values({
-          nome: 'Admin',
-          email: adminEmail,
-          passwordHash: hash,
-          role: 'admin',
-          ativo: true,
-        })
-        console.log('[AUTH] Admin criado:', adminEmail)
-      }
-    } catch (err) {
-      const e = err as Error & { cause?: { code?: string; errno?: number; sqlMessage?: string; message?: string } }
-      console.error('[DB] Erro drizzle:', e.message)
-      const cause = e.cause
-      if (cause) {
-        console.error('[DB] MySQL code:', cause.code, '| errno:', cause.errno)
-        console.error('[DB] MySQL msg:', cause.sqlMessage ?? cause.message)
-      } else {
-        console.error('[DB] Sem cause — erro bruto:', String(err))
+  // Tenta via socket Unix
+  if (!connected) {
+    const sockets = ['/var/run/mysqld/mysqld.sock', '/tmp/mysql.sock']
+    for (const socketPath of sockets) {
+      try {
+        const conn = await mysql.createConnection({ ...baseConfig, socketPath })
+        await conn.query('SELECT 1')
+        await conn.end()
+        console.log(`[DB] Conectado via socket="${socketPath}" ✓`)
+        connected = true
+        break
+      } catch (err: unknown) {
+        const e = err as { code?: string; errno?: number; message?: string }
+        console.error(`[DB] socket="${socketPath}" falhou → ${e.code} ${e.message}`)
       }
     }
+  }
+
+  if (!connected) {
+    console.error('[DB] NENHUM método de conexão funcionou.')
   }
 }
