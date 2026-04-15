@@ -46,11 +46,15 @@ export async function register() {
         console.log('[AUTH] Admin criado:', adminEmail)
       }
     } catch (err) {
-      const e = err as Error & { cause?: unknown; code?: string; errno?: number; sqlMessage?: string }
-      console.error('[DB] Erro:', e.message)
-      console.error('[DB] Código:', e.code, '| errno:', e.errno)
-      console.error('[DB] SQL message:', e.sqlMessage)
-      console.error('[DB] Causa:', e.cause)
+      const e = err as Error & { cause?: { code?: string; errno?: number; sqlMessage?: string; message?: string } }
+      console.error('[DB] Erro drizzle:', e.message)
+      const cause = e.cause
+      if (cause) {
+        console.error('[DB] MySQL code:', cause.code, '| errno:', cause.errno)
+        console.error('[DB] MySQL msg:', cause.sqlMessage ?? cause.message)
+      } else {
+        console.error('[DB] Sem cause — erro bruto:', String(err))
+      }
     }
   }
 }
