@@ -91,7 +91,7 @@ export default async function AdminPedidoDetalhe({ params }: Props) {
             Pedido #{order.numero}
           </h1>
           <p className="text-on-surface-variant text-sm mt-1">
-            {new Date(order.createdAt).toLocaleDateString('pt-BR', {
+            {new Date(order.createdAt).toLocaleString('pt-BR', {
               day: '2-digit',
               month: 'long',
               year: 'numeric',

@@ -128,7 +128,7 @@ export default async function AdminPedidos({ searchParams }: Props) {
                       {Number(o.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </td>
                     <td className="px-4 py-3 text-right text-on-surface-variant hidden md:table-cell">
-                      {new Date(o.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(o.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </td>
                   </tr>
                 ))}
