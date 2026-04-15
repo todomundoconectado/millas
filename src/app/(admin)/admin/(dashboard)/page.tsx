@@ -1,9 +1,71 @@
-export default function AdminDashboard() {
-  const stats = [
-    { label: 'Pedidos hoje', value: '—', icon: 'receipt_long', color: 'text-primary' },
-    { label: 'Receita hoje', value: '—', icon: 'payments', color: 'text-secondary' },
-    { label: 'Produtos ativos', value: '—', icon: 'inventory_2', color: 'text-tertiary' },
-    { label: 'Pedidos pendentes', value: '—', icon: 'pending_actions', color: 'text-error' },
+export const dynamic = 'force-dynamic'
+
+import { db } from '@/lib/db'
+import { orders, products } from '@/lib/db/schema'
+import { eq, and, gte, sql } from 'drizzle-orm'
+
+async function getDashboardStats() {
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+
+  const [
+    pedidosHoje,
+    receitaHoje,
+    produtosAtivos,
+    pedidosPendentes,
+  ] = await Promise.all([
+    db.select({ total: sql<number>`COUNT(*)` })
+      .from(orders)
+      .where(gte(orders.createdAt, hoje))
+      .then(r => Number(r[0]?.total ?? 0)),
+
+    db.select({ soma: sql<string>`COALESCE(SUM(total), 0)` })
+      .from(orders)
+      .where(and(gte(orders.createdAt, hoje), eq(orders.pagamentoStatus, 'aprovado')))
+      .then(r => Number(r[0]?.soma ?? 0)),
+
+    db.select({ total: sql<number>`COUNT(*)` })
+      .from(products)
+      .where(eq(products.ativo, true))
+      .then(r => Number(r[0]?.total ?? 0)),
+
+    db.select({ total: sql<number>`COUNT(*)` })
+      .from(orders)
+      .where(eq(orders.status, 'pendente'))
+      .then(r => Number(r[0]?.total ?? 0)),
+  ])
+
+  return { pedidosHoje, receitaHoje, produtosAtivos, pedidosPendentes }
+}
+
+export default async function AdminDashboard() {
+  const stats = await getDashboardStats()
+
+  const cards = [
+    {
+      label: 'Pedidos hoje',
+      value: String(stats.pedidosHoje),
+      icon: 'receipt_long',
+      color: 'text-primary',
+    },
+    {
+      label: 'Receita hoje',
+      value: stats.receitaHoje.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      icon: 'payments',
+      color: 'text-secondary',
+    },
+    {
+      label: 'Produtos ativos',
+      value: stats.produtosAtivos.toLocaleString('pt-BR'),
+      icon: 'inventory_2',
+      color: 'text-tertiary',
+    },
+    {
+      label: 'Pedidos pendentes',
+      value: String(stats.pedidosPendentes),
+      icon: 'pending_actions',
+      color: 'text-error',
+    },
   ]
 
   return (
@@ -14,19 +76,13 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map(stat => (
-          <div key={stat.label} className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/20">
-            <span className={`material-symbols-outlined text-[28px] filled ${stat.color}`}>{stat.icon}</span>
-            <p className="text-2xl font-headline font-extrabold text-on-surface mt-3">{stat.value}</p>
-            <p className="text-xs text-on-surface-variant mt-1">{stat.label}</p>
+        {cards.map(card => (
+          <div key={card.label} className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/20">
+            <span className={`material-symbols-outlined text-[28px] filled ${card.color}`}>{card.icon}</span>
+            <p className="text-2xl font-headline font-extrabold text-on-surface mt-3">{card.value}</p>
+            <p className="text-xs text-on-surface-variant mt-1">{card.label}</p>
           </div>
         ))}
-      </div>
-
-      <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/20">
-        <p className="text-on-surface-variant text-sm text-center py-8">
-          Conecte o banco de dados para ver os dados em tempo real.
-        </p>
       </div>
     </div>
   )

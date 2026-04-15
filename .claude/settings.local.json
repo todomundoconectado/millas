@@ -65,7 +65,10 @@
       "Bash(rm \"src/app/\\(admin\\)/admin/layout.tsx\" \"src/app/\\(admin\\)/admin/page.tsx\" \"src/app/\\(admin\\)/admin/banners/page.tsx\" \"src/app/\\(admin\\)/admin/categorias/page.tsx\" \"src/app/\\(admin\\)/admin/cupons/page.tsx\" \"src/app/\\(admin\\)/admin/pedidos/page.tsx\" \"src/app/\\(admin\\)/admin/produtos/page.tsx\" \"src/app/\\(admin\\)/admin/promocoes/page.tsx\")",
       "Bash(rmdir \"src/app/\\(admin\\)/admin/banners\" \"src/app/\\(admin\\)/admin/categorias\" \"src/app/\\(admin\\)/admin/cupons\" \"src/app/\\(admin\\)/admin/pedidos\" \"src/app/\\(admin\\)/admin/produtos\" \"src/app/\\(admin\\)/admin/promocoes\")",
       "Bash(cp -r \"src/app/\\(admin\\)/admin/produtos/novo\" \"src/app/\\(admin\\)/admin/\\(dashboard\\)/produtos/novo\")",
-      "Bash(rm -rf \"src/app/\\(admin\\)/admin/layout.tsx\" \"src/app/\\(admin\\)/admin/page.tsx\" \"src/app/\\(admin\\)/admin/banners\" \"src/app/\\(admin\\)/admin/categorias\" \"src/app/\\(admin\\)/admin/cupons\" \"src/app/\\(admin\\)/admin/pedidos\" \"src/app/\\(admin\\)/admin/produtos\" \"src/app/\\(admin\\)/admin/promocoes\")"
+      "Bash(rm -rf \"src/app/\\(admin\\)/admin/layout.tsx\" \"src/app/\\(admin\\)/admin/page.tsx\" \"src/app/\\(admin\\)/admin/banners\" \"src/app/\\(admin\\)/admin/categorias\" \"src/app/\\(admin\\)/admin/cupons\" \"src/app/\\(admin\\)/admin/pedidos\" \"src/app/\\(admin\\)/admin/produtos\" \"src/app/\\(admin\\)/admin/promocoes\")",
+      "Bash(xargs grep:*)",
+      "Bash(npx next:*)",
+      "Bash(git -C \"d:/Sync/TMC/antigravity/super-millas\" log --oneline -5)"
     ]
   }
 }
