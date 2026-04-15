@@ -46,7 +46,11 @@ export async function register() {
         console.log('[AUTH] Admin criado:', adminEmail)
       }
     } catch (err) {
-      console.error('[DB] Erro na inicialização:', err)
+      const e = err as Error & { cause?: unknown; code?: string; errno?: number; sqlMessage?: string }
+      console.error('[DB] Erro:', e.message)
+      console.error('[DB] Código:', e.code, '| errno:', e.errno)
+      console.error('[DB] SQL message:', e.sqlMessage)
+      console.error('[DB] Causa:', e.cause)
     }
   }
 }
