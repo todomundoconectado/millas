@@ -1,10 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCart } from '@/lib/store/cart'
 import { formatBRL, buscarCEP } from '@/lib/formatters'
 import PriceDisplay from '@/components/ui/PriceDisplay'
+import { validateCoupon } from '@/app/actions/coupon'
+import { createOrder } from '@/app/actions/order'
 
 // ── KG Warning Modal ───────────────────────────────────────────────────────
 
@@ -63,17 +66,18 @@ function KgWarningModal({ onConfirm, onCancel }: { onConfirm: () => void; onCanc
 // ── Delivery Slots ─────────────────────────────────────────────────────────
 
 const SLOTS = [
-  { id: '1', label: 'Hoje', hora: '14h – 18h', gratis: true },
-  { id: '2', label: 'Hoje', hora: '18h – 22h', gratis: true },
-  { id: '3', label: 'Amanhã', hora: '08h – 12h', gratis: true },
-  { id: '4', label: 'Amanhã', hora: '12h – 16h', gratis: true },
+  { id: '1', data: 'Hoje',   hora: '14h – 18h', label: 'Hoje — 14h – 18h' },
+  { id: '2', data: 'Hoje',   hora: '18h – 22h', label: 'Hoje — 18h – 22h' },
+  { id: '3', data: 'Amanhã', hora: '08h – 12h', label: 'Amanhã — 08h – 12h' },
+  { id: '4', data: 'Amanhã', hora: '12h – 16h', label: 'Amanhã — 12h – 16h' },
 ]
 
 // ── Cart Page ──────────────────────────────────────────────────────────────
 
-type Step = 'carrinho' | 'entrega' | 'pagamento' | 'confirmacao'
+type Step = 'carrinho' | 'entrega' | 'pagamento'
 
 export default function CarrinhoPage() {
+  const router = useRouter()
   const { items, coupon, updateQty, removeItem, applyCoupon, removeCoupon, clear,
     subtotal, desconto, frete, total, hasKgItems } = useCart()
 
@@ -82,12 +86,18 @@ export default function CarrinhoPage() {
   const [slotId, setSlotId] = useState('1')
   const [couponInput, setCouponInput] = useState('')
   const [couponError, setCouponError] = useState('')
+  const [orderError, setOrderError] = useState('')
 
+  const [nome, setNome] = useState('')
+  const [telefone, setTelefone] = useState('')
   const [endereco, setEndereco] = useState({
     cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
   })
   const [cepLoading, setCepLoading] = useState(false)
   const [pagamento, setPagamento] = useState<'pix' | 'cartao' | 'boleto'>('pix')
+
+  const [couponPending, startCouponTransition] = useTransition()
+  const [orderPending, startOrderTransition] = useTransition()
 
   async function handleCEP(cep: string) {
     setEndereco(e => ({ ...e, cep }))
@@ -109,9 +119,68 @@ export default function CarrinhoPage() {
     }
   }
 
-  async function handleCoupon() {
-    // TODO: validar via Server Action
-    setCouponError('Cupom não encontrado ou expirado.')
+  function handleContinuarPagamento() {
+    if (!nome.trim() || !telefone.trim()) {
+      alert('Preencha seu nome e telefone.')
+      return
+    }
+    if (!endereco.logradouro || !endereco.numero || !endereco.bairro || !endereco.cidade) {
+      alert('Preencha o endereço completo.')
+      return
+    }
+    setStep('pagamento')
+  }
+
+  function handleCoupon() {
+    if (!couponInput.trim()) return
+    setCouponError('')
+    startCouponTransition(async () => {
+      const result = await validateCoupon(couponInput, subtotal())
+      if ('error' in result) {
+        setCouponError(result.error)
+      } else {
+        applyCoupon(result.coupon)
+        setCouponInput('')
+        setCouponError('')
+      }
+    })
+  }
+
+  function handleFinalizarPedido() {
+    setOrderError('')
+    const slot = SLOTS.find(s => s.id === slotId) ?? SLOTS[0]
+
+    startOrderTransition(async () => {
+      const result = await createOrder({
+        items: items.map(i => ({
+          productId: i.productId,
+          nome: i.nome,
+          preco: i.preco,
+          quantidade: i.quantidade,
+          isKg: i.isKg,
+          imagem: i.imagem,
+          slug: i.slug,
+        })),
+        clienteNome: nome,
+        clienteTelefone: telefone,
+        endereco,
+        deliverySlot: { data: slot.data, hora: slot.hora, label: slot.label },
+        pagamentoTipo: pagamento,
+        couponId: coupon?.id,
+        subtotal: subtotal(),
+        desconto: desconto(),
+        frete: frete(),
+        total: total(),
+      })
+
+      if (!result.success) {
+        setOrderError(result.error)
+        return
+      }
+
+      clear()
+      router.push(`/obrigado?pedido=${result.numero}`)
+    })
   }
 
   if (items.length === 0 && step === 'carrinho') {
@@ -142,7 +211,6 @@ export default function CarrinhoPage() {
           {step === 'carrinho' && 'Seu Carrinho'}
           {step === 'entrega' && 'Dados de Entrega'}
           {step === 'pagamento' && 'Pagamento'}
-          {step === 'confirmacao' && 'Pedido Confirmado!'}
         </h1>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -158,7 +226,6 @@ export default function CarrinhoPage() {
                       key={item.productId}
                       className="flex items-center gap-4 p-4 rounded-xl bg-surface-container-lowest hover:bg-surface-container transition-colors group"
                     >
-                      {/* Imagem placeholder */}
                       <div className="w-20 h-20 rounded-xl bg-surface-container shrink-0 flex items-center justify-center overflow-hidden">
                         {item.imagem ? (
                           <img src={item.imagem} alt={item.nome} className="w-full h-full object-cover" />
@@ -167,7 +234,6 @@ export default function CarrinhoPage() {
                         )}
                       </div>
 
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <Link href={`/produtos/${item.slug}`} className="font-headline font-bold text-on-surface hover:text-primary transition-colors line-clamp-2 leading-snug">
                           {item.nome}
@@ -175,7 +241,6 @@ export default function CarrinhoPage() {
                         {item.isKg && (
                           <span className="text-xs text-on-surface-variant">Aprox. {item.quantidade} kg</span>
                         )}
-                        {/* Qty selector */}
                         <div className="flex items-center gap-0 bg-surface-container rounded-full px-1 py-0.5 w-fit mt-2">
                           <button onClick={() => updateQty(item.productId, item.quantidade - (item.isKg ? 0.5 : 1))}
                             className="w-7 h-7 flex items-center justify-center text-on-surface hover:text-primary transition-colors">
@@ -191,7 +256,6 @@ export default function CarrinhoPage() {
                         </div>
                       </div>
 
-                      {/* Preço + remover */}
                       <div className="flex flex-col items-end gap-2 shrink-0">
                         <span className="font-headline font-extrabold text-lg text-primary">
                           {formatBRL(item.preco * item.quantidade)}
@@ -225,14 +289,16 @@ export default function CarrinhoPage() {
                         type="text"
                         value={couponInput}
                         onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCoupon()}
                         placeholder="Digite seu cupom"
                         className="flex-1 bg-surface-container-highest rounded-full py-2.5 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                       <button
                         onClick={handleCoupon}
-                        className="px-5 py-2.5 rounded-full btn-primary-gradient text-on-primary text-sm font-bold"
+                        disabled={couponPending || !couponInput.trim()}
+                        className="px-5 py-2.5 rounded-full btn-primary-gradient text-on-primary text-sm font-bold disabled:opacity-50"
                       >
-                        Aplicar
+                        {couponPending ? 'Validando...' : 'Aplicar'}
                       </button>
                     </div>
                   )}
@@ -259,9 +325,9 @@ export default function CarrinhoPage() {
                         <span className={`material-symbols-outlined text-[18px] mb-1 ${slotId === slot.id ? 'text-primary filled' : 'text-on-surface-variant'}`}>
                           {slotId === slot.id ? 'check_circle' : 'radio_button_unchecked'}
                         </span>
-                        <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">{slot.label}</p>
+                        <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">{slot.data}</p>
                         <p className="font-bold text-on-surface text-sm">{slot.hora}</p>
-                        <p className="text-xs text-primary font-medium mt-0.5">{slot.gratis ? 'Grátis' : ''}</p>
+                        <p className="text-xs text-primary font-medium mt-0.5">Grátis</p>
                       </button>
                     ))}
                   </div>
@@ -303,7 +369,7 @@ export default function CarrinhoPage() {
                       <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant block mb-1.5">{label}</label>
                       <input
                         type="text"
-                        value={(endereco as any)[key]}
+                        value={(endereco as Record<string, string>)[key]}
                         onChange={(e) => setEndereco(a => ({ ...a, [key]: e.target.value }))}
                         className="w-full bg-surface-container rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
@@ -313,16 +379,31 @@ export default function CarrinhoPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant block mb-1.5">Nome completo</label>
-                    <input type="text" className="w-full bg-surface-container rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant block mb-1.5">Nome completo *</label>
+                    <input
+                      type="text"
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      placeholder="Seu nome"
+                      className="w-full bg-surface-container rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
                   </div>
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant block mb-1.5">Telefone</label>
-                    <input type="tel" placeholder="(11) 99999-8888" className="w-full bg-surface-container rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant block mb-1.5">Telefone / WhatsApp *</label>
+                    <input
+                      type="tel"
+                      value={telefone}
+                      onChange={(e) => setTelefone(e.target.value)}
+                      placeholder="(19) 99999-8888"
+                      className="w-full bg-surface-container rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
                   </div>
                 </div>
 
-                <button onClick={() => setStep('pagamento')} className="btn-primary-gradient text-on-primary py-4 rounded-xl font-bold w-full mt-2">
+                <button
+                  onClick={handleContinuarPagamento}
+                  className="btn-primary-gradient text-on-primary py-4 rounded-xl font-bold w-full mt-2"
+                >
                   Continuar para pagamento
                 </button>
               </div>
@@ -362,105 +443,92 @@ export default function CarrinhoPage() {
                   ))}
                 </div>
 
-                <button
-                  onClick={() => setStep('confirmacao')}
-                  className="btn-primary-gradient text-on-primary py-4 rounded-xl font-bold w-full mt-2 flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-                >
-                  <span className="material-symbols-outlined text-[22px]">check_circle</span>
-                  Finalizar pedido
-                </button>
-              </div>
-            )}
-
-            {/* STEP: Confirmação */}
-            {step === 'confirmacao' && (
-              <div className="flex flex-col items-center text-center gap-6 py-12">
-                <div className="w-20 h-20 rounded-full bg-primary-fixed flex items-center justify-center">
-                  <span className="material-symbols-outlined text-5xl text-primary filled">check_circle</span>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-headline font-extrabold text-on-surface mb-2">Pedido realizado com sucesso!</h2>
-                  <p className="text-on-surface-variant">
-                    Seu pedido foi recebido e está sendo preparado. Você receberá uma confirmação por WhatsApp.
-                  </p>
-                </div>
-                {pagamento === 'pix' && (
-                  <div className="p-6 rounded-xl bg-surface-container-lowest border border-outline-variant/20 w-full max-w-xs">
-                    <p className="text-sm font-bold text-on-surface mb-3">Pague via PIX</p>
-                    <div className="w-48 h-48 bg-surface-container rounded-xl mx-auto flex items-center justify-center">
-                      <span className="material-symbols-outlined text-6xl text-outline-variant">qr_code_2</span>
-                    </div>
-                    <p className="text-xs text-on-surface-variant mt-3">QR Code gerado após confirmação do pedido</p>
+                {orderError && (
+                  <div className="p-4 rounded-xl bg-error-container text-on-error-container text-sm font-medium">
+                    {orderError}
                   </div>
                 )}
-                <Link href="/" className="btn-primary-gradient text-on-primary px-8 py-3.5 rounded-full font-bold">
-                  Voltar para o início
-                </Link>
+
+                <button
+                  onClick={handleFinalizarPedido}
+                  disabled={orderPending}
+                  className="btn-primary-gradient text-on-primary py-4 rounded-xl font-bold w-full mt-2 flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60"
+                >
+                  {orderPending ? (
+                    <>
+                      <span className="material-symbols-outlined text-[22px] animate-spin">sync</span>
+                      Registrando pedido...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[22px]">check_circle</span>
+                      Finalizar pedido
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>
 
           {/* ── Order Summary ── */}
-          {step !== 'confirmacao' && (
-            <aside className="w-full lg:w-96 shrink-0">
-              <div className="sticky top-28 p-7 rounded-3xl bg-surface-container-lowest shadow-2xl shadow-on-secondary-fixed/5 border border-outline-variant/10">
-                <h2 className="text-xl font-headline font-bold text-on-surface mb-6">Resumo do pedido</h2>
+          <aside className="w-full lg:w-96 shrink-0">
+            <div className="sticky top-28 p-7 rounded-3xl bg-surface-container-lowest shadow-2xl shadow-on-secondary-fixed/5 border border-outline-variant/10">
+              <h2 className="text-xl font-headline font-bold text-on-surface mb-6">Resumo do pedido</h2>
 
-                <div className="flex flex-col gap-3 mb-6">
-                  <div className="flex justify-between text-on-surface-variant text-sm">
-                    <span>Subtotal</span>
-                    <span className="font-medium text-on-surface">{formatBRL(subtotal())}</span>
-                  </div>
-                  {desconto() > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-primary">Desconto</span>
-                      <span className="font-medium text-primary">– {formatBRL(desconto())}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-on-surface-variant">Frete</span>
-                    <span className={frete() === 0 ? 'text-primary font-medium' : 'text-on-surface font-medium'}>
-                      {frete() === 0 ? 'GRÁTIS' : formatBRL(frete())}
-                    </span>
-                  </div>
-                  <div className="pt-3 mt-1 border-t border-outline-variant/20 flex justify-between items-baseline">
-                    <span className="font-bold text-on-surface">Total</span>
-                    <span className="text-2xl font-headline font-black text-primary">{formatBRL(total())}</span>
-                  </div>
+              <div className="flex flex-col gap-3 mb-6">
+                <div className="flex justify-between text-on-surface-variant text-sm">
+                  <span>Subtotal</span>
+                  <span className="font-medium text-on-surface">{formatBRL(subtotal())}</span>
                 </div>
-
-                {step === 'carrinho' && (
-                  <button
-                    onClick={handleCheckout}
-                    className="w-full py-4 rounded-xl btn-primary-gradient text-on-primary font-bold text-base shadow-lg shadow-primary/20 hover:opacity-92 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-[22px]">arrow_forward</span>
-                    Finalizar compra
-                  </button>
-                )}
-
-                {step !== 'carrinho' && (
-                  <button
-                    onClick={() => setStep('carrinho')}
-                    className="w-full py-3 rounded-xl border border-outline-variant/30 text-on-surface-variant font-bold text-sm hover:bg-surface-container transition-colors"
-                  >
-                    ← Voltar ao carrinho
-                  </button>
-                )}
-
-                <div className="mt-6 pt-6 border-t border-outline-variant/10 flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-on-surface-variant text-[22px]">verified_user</span>
-                    <span className="text-xs text-on-surface-variant">Compra 100% segura e criptografada</span>
+                {desconto() > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-primary">Desconto</span>
+                    <span className="font-medium text-primary">– {formatBRL(desconto())}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-on-surface-variant text-[22px]">eco</span>
-                    <span className="text-xs text-on-surface-variant">Entrega sustentável e embalagem reciclável</span>
-                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-on-surface-variant">Frete</span>
+                  <span className={frete() === 0 ? 'text-primary font-medium' : 'text-on-surface font-medium'}>
+                    {frete() === 0 ? 'GRÁTIS' : formatBRL(frete())}
+                  </span>
+                </div>
+                <div className="pt-3 mt-1 border-t border-outline-variant/20 flex justify-between items-baseline">
+                  <span className="font-bold text-on-surface">Total</span>
+                  <span className="text-2xl font-headline font-black text-primary">{formatBRL(total())}</span>
                 </div>
               </div>
-            </aside>
-          )}
+
+              {step === 'carrinho' && (
+                <button
+                  onClick={handleCheckout}
+                  className="w-full py-4 rounded-xl btn-primary-gradient text-on-primary font-bold text-base shadow-lg shadow-primary/20 hover:opacity-92 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[22px]">arrow_forward</span>
+                  Finalizar compra
+                </button>
+              )}
+
+              {step !== 'carrinho' && (
+                <button
+                  onClick={() => setStep(step === 'pagamento' ? 'entrega' : 'carrinho')}
+                  className="w-full py-3 rounded-xl border border-outline-variant/30 text-on-surface-variant font-bold text-sm hover:bg-surface-container transition-colors"
+                >
+                  ← Voltar
+                </button>
+              )}
+
+              <div className="mt-6 pt-6 border-t border-outline-variant/10 flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-on-surface-variant text-[22px]">verified_user</span>
+                  <span className="text-xs text-on-surface-variant">Compra 100% segura e criptografada</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-on-surface-variant text-[22px]">eco</span>
+                  <span className="text-xs text-on-surface-variant">Entrega sustentável e embalagem reciclável</span>
+                </div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </>

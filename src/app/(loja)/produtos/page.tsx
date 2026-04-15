@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import ProductCard from '@/components/loja/ProductCard'
 import { listProducts, PER_PAGE } from '@/lib/db/queries/products'

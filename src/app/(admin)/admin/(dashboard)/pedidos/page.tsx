@@ -107,11 +107,17 @@ export default async function AdminPedidos({ searchParams }: Props) {
               </thead>
               <tbody className="divide-y divide-outline-variant/10">
                 {rows.map((o) => (
-                  <tr key={o.id} className="hover:bg-surface-container/50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-on-surface font-medium">#{o.numero}</td>
+                  <tr key={o.id} className="hover:bg-surface-container/50 transition-colors cursor-pointer">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-on-surface">{o.clienteNome}</p>
-                      <p className="text-xs text-on-surface-variant">{o.clienteTelefone}</p>
+                      <Link href={`/admin/pedidos/${o.id}`} className="font-mono text-on-surface font-medium hover:text-primary transition-colors">
+                        #{o.numero}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href={`/admin/pedidos/${o.id}`} className="block">
+                        <p className="font-medium text-on-surface">{o.clienteNome}</p>
+                        <p className="text-xs text-on-surface-variant">{o.clienteTelefone}</p>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_COLORS[o.status]}`}>
