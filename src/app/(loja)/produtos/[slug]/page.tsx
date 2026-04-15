@@ -19,12 +19,26 @@ export async function generateMetadata({ params }: Props) {
   }
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function ProdutoDetalhe({ params }: Props) {
   const { slug } = await params
-  const produto = await getProductBySlug(slug)
+
+  let produto: Awaited<ReturnType<typeof getProductBySlug>>
+  try {
+    produto = await getProductBySlug(slug)
+  } catch (err) {
+    console.error('[PRODUTO] DB error para slug:', slug, err)
+    throw err // mostra 500 em vez de 404 quando é erro de banco
+  }
   if (!produto) notFound()
 
-  const relacionados = await getRecommendations(produto.id, produto.categoriaId)
+  let relacionados: Awaited<ReturnType<typeof getRecommendations>> = []
+  try {
+    relacionados = await getRecommendations(produto.id, produto.categoriaId)
+  } catch {
+    // product_affinities table may not exist yet — degrade gracefully
+  }
   const imagens = (produto.imagens as string[]) ?? []
 
   return (
