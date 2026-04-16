@@ -4,6 +4,7 @@ import { getProductBySlug } from '@/lib/db/queries/products'
 import { getRecommendations } from '@/lib/db/queries/recommendations'
 import ProductCard from '@/components/loja/ProductCard'
 import AddToCartPanel from '@/components/loja/AddToCartPanel'
+import { formatProductDescription } from '@/lib/formatters/description'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -64,13 +65,13 @@ export default async function ProdutoDetalhe({ params }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
         {/* Imagem */}
         <div className="lg:col-span-7">
-          <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-surface-container group">
+          <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-white group">
             {imagens[0] ? (
               <Image
                 src={imagens[0]}
                 alt={produto.nome}
                 fill
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
                 sizes="(max-width: 1024px) 100vw, 58vw"
                 priority
               />
@@ -134,8 +135,11 @@ export default async function ProdutoDetalhe({ params }: Props) {
       {produto.descricao && (
         <div className="mt-16 md:mt-24">
           <div className="bg-surface-container-lowest p-8 rounded-xl">
-            <h2 className="text-xl font-headline font-extrabold mb-4">Sobre o produto</h2>
-            <div className="text-on-surface-variant leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: produto.descricao }} />
+            <h2 className="text-xl font-headline font-extrabold mb-6">Sobre o produto</h2>
+            <div
+              className="text-on-surface-variant leading-relaxed prose prose-sm max-w-none [&_p]:mb-4 [&_p:last-child]:mb-0 [&_strong]:text-on-surface [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_li]:mb-1"
+              dangerouslySetInnerHTML={{ __html: formatProductDescription(produto.descricao) }}
+            />
           </div>
         </div>
       )}
