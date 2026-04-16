@@ -69,12 +69,30 @@ export async function GET(req: NextRequest) {
     console.error('[diagnostico] DB error:', err)
   }
 
+  // ── Diagnóstico do .next/static/chunks ──────────────────────────────────
+  const chunksDir = path.join(process.cwd(), '.next', 'static', 'chunks')
+  let cssChunks: string[] = []
+  let chunksExists = false
+  let cwd = process.cwd()
+  try {
+    chunksExists = fs.existsSync(chunksDir)
+    if (chunksExists) {
+      cssChunks = fs.readdirSync(chunksDir).filter(f => f.endsWith('.css'))
+    }
+  } catch { /* skip */ }
+
   return NextResponse.json({
+    cwd,
     symlink: symlinkStatus,
     permanent_path_exists: permanentPathExists,
     permanent_path: permanente,
     image_dirs_count: imageDirsCount,
     sample_files: sampleFiles,
+    next_static: {
+      chunks_dir: chunksDir,
+      chunks_dir_exists: chunksExists,
+      css_chunks: cssChunks,
+    },
     db: {
       total_products: totalProducts,
       products_with_images: productsWithImages,
