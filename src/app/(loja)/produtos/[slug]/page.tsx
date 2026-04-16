@@ -135,7 +135,7 @@ export default async function ProdutoDetalhe({ params }: Props) {
         <div className="mt-16 md:mt-24">
           <div className="bg-surface-container-lowest p-8 rounded-xl">
             <h2 className="text-xl font-headline font-extrabold mb-4">Sobre o produto</h2>
-            <p className="text-on-surface-variant leading-relaxed whitespace-pre-line">{produto.descricao}</p>
+            <div className="text-on-surface-variant leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: produto.descricao }} />
           </div>
         </div>
       )}
