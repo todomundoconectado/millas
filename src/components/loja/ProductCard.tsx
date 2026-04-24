@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { useState } from 'react'
 import { useCart } from '@/lib/store/cart'
 import PriceDisplay from '@/components/ui/PriceDisplay'
 
@@ -42,6 +43,7 @@ export default function ProductCard({
     })
   }
 
+  const [imgError, setImgError] = useState(false)
   const imgSrc = imagens[0] ?? null
 
   return (
@@ -49,17 +51,18 @@ export default function ProductCard({
       <article className="product-card flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden h-full">
         {/* Imagem */}
         <div className="relative aspect-[4/5] overflow-hidden bg-surface-container shrink-0">
-          {imgSrc ? (
+          {imgSrc && !imgError ? (
             <Image
               src={imgSrc}
               alt={nome}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-500"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              onError={() => setImgError(true)}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-surface-container">
-              <span className="material-symbols-outlined text-6xl text-outline-variant">image</span>
+              <img src="/placeholder-product.svg" alt="" className="w-24 h-24 opacity-60" />
             </div>
           )}
 

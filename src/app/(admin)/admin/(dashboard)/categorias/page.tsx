@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import DeleteConfirmButton from '@/components/admin/DeleteConfirmButton'
 import { db } from '@/lib/db'
 import { categories, products } from '@/lib/db/schema'
 import type { Category } from '@/lib/db/schema'
@@ -309,20 +310,11 @@ export default async function AdminCategorias() {
                         </form>
 
                         {/* Delete */}
-                        <form action={deleteAction}>
-                          <input type="hidden" name="id" value={cat.id} />
-                          <button
-                            type="submit"
-                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-error-container text-on-error-container hover:opacity-80 transition-opacity"
-                            onClick={(e) => {
-                              if (!confirm(`Excluir a categoria "${cat.nome}"? Esta ação não pode ser desfeita.`)) {
-                                e.preventDefault()
-                              }
-                            }}
-                          >
-                            Excluir
-                          </button>
-                        </form>
+                        <DeleteConfirmButton
+                          confirmMessage={`Excluir a categoria "${cat.nome}"? Esta ação não pode ser desfeita.`}
+                          action={deleteAction}
+                          hiddenFields={{ id: cat.id }}
+                        />
                       </div>
                     </td>
                   </tr>

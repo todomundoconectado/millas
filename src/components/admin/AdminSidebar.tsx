@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
@@ -13,6 +14,7 @@ const NAV_ITEMS = [
   { href: '/admin/promocoes', label: 'Promoções', icon: 'local_offer' },
   { href: '/admin/cupons', label: 'Cupons', icon: 'confirmation_number' },
   { href: '/admin/banners', label: 'Banners', icon: 'image' },
+  { href: '/admin/importar-woo', label: 'Importar imagens', icon: 'download' },
 ]
 
 export default function AdminSidebar() {
@@ -24,11 +26,8 @@ export default function AdminSidebar() {
       {/* Logo */}
       <div className="px-6 py-5 border-b border-outline-variant/20">
         <Link href="/admin" className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-3xl filled">storefront</span>
-          <div>
-            <p className="font-headline font-extrabold text-on-surface text-base leading-tight">Super Millas</p>
-            <p className="text-xs text-on-surface-variant">Admin</p>
-          </div>
+          <Image src="/logo-millas.png" alt="Super Millas" width={160} height={52} className="h-12 w-auto object-contain" />
+          <span className="text-xs text-on-surface-variant font-medium">Admin</span>
         </Link>
       </div>
 

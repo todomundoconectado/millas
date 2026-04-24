@@ -8,7 +8,7 @@ export const PER_PAGE = 24
  * Normaliza o campo `imagens` que pode vir do mysql2 como string JSON ou array.
  * O driver mysql2 no Hostinger não faz typeCast automático de colunas JSON.
  */
-function parseImagens(v: unknown): string[] {
+export function parseImagens(v: unknown): string[] {
   if (Array.isArray(v)) return v as string[]
   if (typeof v === 'string') {
     try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }

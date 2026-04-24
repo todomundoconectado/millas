@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRef, useState, useTransition } from 'react'
 
 export interface ProductRow {
@@ -109,6 +110,7 @@ export default function ProductsTable({ rows, updatePrice, bulkToggle }: Props) 
                 <th className="text-right px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Preço</th>
                 <th className="text-right px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider hidden sm:table-cell">Estoque</th>
                 <th className="text-center px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 w-10" />
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
@@ -130,16 +132,20 @@ export default function ProductsTable({ rows, updatePrice, bulkToggle }: Props) 
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-surface-container overflow-hidden shrink-0">
-                          {imagem ? (
-                            <img src={imagem} alt={p.nome} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="material-symbols-outlined text-[18px] text-outline-variant">image</span>
-                            </div>
-                          )}
+                          <img
+                            src={imagem || '/placeholder-product.svg'}
+                            alt={p.nome}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder-product.svg' }}
+                          />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-on-surface truncate max-w-[200px] md:max-w-[300px]">{p.nome}</p>
+                          <Link
+                            href={`/admin/produtos/${p.id}`}
+                            className="font-medium text-on-surface hover:text-primary transition-colors truncate max-w-[200px] md:max-w-[300px] block"
+                          >
+                            {p.nome}
+                          </Link>
                           <p className="text-xs text-on-surface-variant">{p.isKg ? 'Vendido por kg' : 'Unidade'}</p>
                         </div>
                       </div>
@@ -194,6 +200,15 @@ export default function ProductsTable({ rows, updatePrice, bulkToggle }: Props) 
                       }`}>
                         {p.ativo ? 'Ativo' : 'Inativo'}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Link
+                        href={`/admin/produtos/${p.id}`}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface-container text-on-surface-variant hover:bg-primary-container hover:text-primary transition-colors"
+                        title="Editar produto"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                      </Link>
                     </td>
                   </tr>
                 )

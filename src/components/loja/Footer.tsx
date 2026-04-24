@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 const links = [
   { label: 'Sobre nós', href: '#' },
@@ -12,11 +13,8 @@ export default function Footer() {
     <footer className="bg-surface-container-low border-t border-outline-variant/20 py-10 mt-auto">
       <div className="max-w-screen-xl mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg btn-primary-gradient flex items-center justify-center">
-            <span className="material-symbols-outlined text-white text-base filled">shopping_cart</span>
-          </div>
-          <span className="text-base font-headline font-extrabold text-primary">Super Millas</span>
+        <div>
+          <Image src="/logo-millas.png" alt="Super Millas" width={160} height={52} className="h-14 w-auto object-contain" />
         </div>
 
         {/* Links */}

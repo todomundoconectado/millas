@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { revalidatePath } from 'next/cache'
+import DeleteConfirmButton from '@/components/admin/DeleteConfirmButton'
 import { db } from '@/lib/db'
 import { coupons } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -281,15 +282,11 @@ export default async function AdminCupons() {
                               {coupon.ativo ? 'Desativar' : 'Ativar'}
                             </button>
                           </form>
-                          <form action={deleteAction}>
-                            <button
-                              type="submit"
-                              className={deleteBtn}
-                              onClick={undefined}
-                            >
-                              Excluir
-                            </button>
-                          </form>
+                          <DeleteConfirmButton
+                            confirmMessage={`Excluir o cupom "${coupon.codigo}"? Esta ação não pode ser desfeita.`}
+                            action={deleteAction}
+                            className={deleteBtn}
+                          />
                         </div>
                       </td>
                     </tr>

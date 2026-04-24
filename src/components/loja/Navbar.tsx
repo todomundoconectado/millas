@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCart } from '@/lib/store/cart'
 import { useState, useEffect, useRef } from 'react'
@@ -23,6 +24,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const prevCount = useRef(itemCount)
   const [cartBounce, setCartBounce] = useState(false)
+  const [cartTooltip, setCartTooltip] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -33,7 +35,9 @@ export default function Navbar() {
   useEffect(() => {
     if (itemCount > prevCount.current) {
       setCartBounce(true)
+      setCartTooltip(true)
       setTimeout(() => setCartBounce(false), 400)
+      setTimeout(() => setCartTooltip(false), 1600)
     }
     prevCount.current = itemCount
   }, [itemCount])
@@ -55,15 +59,8 @@ export default function Navbar() {
         <div className="max-w-screen-xl mx-auto px-4 md:px-8">
           <div className="flex items-center gap-4 h-16 md:h-20">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 shrink-0">
-              <div className="w-8 h-8 rounded-lg btn-primary-gradient flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-lg filled">
-                  shopping_cart
-                </span>
-              </div>
-              <span className="text-lg md:text-xl font-headline font-extrabold text-primary leading-none">
-                Super Millas
-              </span>
+            <Link href="/" className="flex items-center shrink-0">
+              <Image src="/logo-millas.png" alt="Super Millas" width={200} height={64} className="h-14 w-auto object-contain" />
             </Link>
 
             {/* Nav desktop */}
@@ -124,6 +121,11 @@ export default function Navbar() {
                     }`}
                   >
                     {itemCount > 99 ? '99+' : itemCount}
+                  </span>
+                )}
+                {cartTooltip && (
+                  <span className="animate-cart-balloon absolute -top-9 left-1/2 bg-on-surface text-surface text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap pointer-events-none shadow-md">
+                    +1 no carrinho
                   </span>
                 )}
               </Link>

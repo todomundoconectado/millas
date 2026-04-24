@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { db } from '@/lib/db'
 import { orders } from '@/lib/db/schema'
-import { eq, desc, sql } from 'drizzle-orm'
+import { eq, desc, sql, gte, and } from 'drizzle-orm'
 import type { orderStatuses } from '@/lib/db/schema'
 
 const STATUS_LABELS: Record<typeof orderStatuses[number], string> = {
@@ -27,15 +27,23 @@ const STATUS_COLORS: Record<typeof orderStatuses[number], string> = {
 const PER_PAGE = 30
 
 interface Props {
-  searchParams: Promise<{ status?: string; pagina?: string }>
+  searchParams: Promise<{ status?: string; pagina?: string; data?: string }>
 }
 
 export default async function AdminPedidos({ searchParams }: Props) {
   const params = await searchParams
   const filtroStatus = params.status as typeof orderStatuses[number] | undefined
+  const filtroHoje = params.data === 'hoje'
   const pagina = parseInt(params.pagina ?? '1')
 
-  const where = filtroStatus ? eq(orders.status, filtroStatus) : undefined
+  const conditions = []
+  if (filtroStatus) conditions.push(eq(orders.status, filtroStatus))
+  if (filtroHoje) {
+    const inicioHoje = new Date()
+    inicioHoje.setHours(0, 0, 0, 0)
+    conditions.push(gte(orders.createdAt, inicioHoje))
+  }
+  const where = conditions.length ? and(...conditions) : undefined
 
   const [{ total }] = await db
     .select({ total: sql<number>`COUNT(*)` })
@@ -56,6 +64,7 @@ export default async function AdminPedidos({ searchParams }: Props) {
   function pageUrl(p: number) {
     const q = new URLSearchParams()
     if (filtroStatus) q.set('status', filtroStatus)
+    if (filtroHoje) q.set('data', 'hoje')
     if (p > 1) q.set('pagina', String(p))
     return `/admin/pedidos${q.toString() ? `?${q}` : ''}`
   }
@@ -66,6 +75,14 @@ export default async function AdminPedidos({ searchParams }: Props) {
         <h1 className="text-2xl font-headline font-extrabold text-on-surface">Pedidos</h1>
         <p className="text-on-surface-variant text-sm mt-1">{totalNum} pedido{totalNum !== 1 ? 's' : ''}</p>
       </div>
+
+      {filtroHoje && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-4 rounded-xl bg-primary/10 border border-primary/20 text-sm text-primary font-medium">
+          <span className="material-symbols-outlined text-[18px]">today</span>
+          Mostrando pedidos de hoje — {new Date().toLocaleDateString('pt-BR')}
+          <Link href="/admin/pedidos" className="ml-auto text-xs underline text-on-surface-variant">Ver todos</Link>
+        </div>
+      )}
 
       {/* Filtros de status */}
       <div className="flex gap-2 flex-wrap mb-6">

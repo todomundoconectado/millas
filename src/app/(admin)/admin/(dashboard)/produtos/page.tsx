@@ -10,7 +10,7 @@ import ProductsTable from './ProductsTable'
 const PER_PAGE = 50
 
 interface Props {
-  searchParams: Promise<{ q?: string; pagina?: string; ativo?: string }>
+  searchParams: Promise<{ q?: string; pagina?: string; ativo?: string; semImagem?: string }>
 }
 
 async function updateProductPrice(id: number, preco: string) {
@@ -32,14 +32,22 @@ export default async function AdminProdutos({ searchParams }: Props) {
   const params = await searchParams
   const busca = params.q ?? ''
   const pagina = parseInt(params.pagina ?? '1')
-  const filtroAtivo = params.ativo // 'true' | 'false' | undefined
+  const filtroAtivo = params.ativo
+  const filtroSemImagem = params.semImagem === 'true'
 
   const conditions = []
   if (busca) conditions.push(like(products.nome, `%${busca}%`))
   if (filtroAtivo === 'true') conditions.push(eq(products.ativo, true))
   if (filtroAtivo === 'false') conditions.push(eq(products.ativo, false))
+  if (filtroSemImagem) conditions.push(sql`JSON_LENGTH(${products.imagens}) = 0`)
 
   const where = conditions.length ? and(...conditions) : undefined
+
+  // Count total sem imagem para badge informativo
+  const [{ semImagem }] = await db
+    .select({ semImagem: sql<number>`COUNT(*)` })
+    .from(products)
+    .where(and(eq(products.ativo, true), sql`JSON_LENGTH(${products.imagens}) = 0`))
 
   const [{ total }] = await db
     .select({ total: sql<number>`COUNT(*)` })
@@ -67,17 +75,18 @@ export default async function AdminProdutos({ searchParams }: Props) {
     .offset((pagina - 1) * PER_PAGE)
 
   const totalNum = Number(total)
+  const semImagemNum = Number(semImagem)
   const paginas = Math.ceil(totalNum / PER_PAGE)
 
   function pageUrl(p: number) {
     const q = new URLSearchParams()
     if (busca) q.set('q', busca)
     if (filtroAtivo) q.set('ativo', filtroAtivo)
+    if (filtroSemImagem) q.set('semImagem', 'true')
     if (p > 1) q.set('pagina', String(p))
     return `/admin/produtos${q.toString() ? `?${q}` : ''}`
   }
 
-  // Serialize for client component
   const tableRows = rows.map(p => ({
     id: p.id,
     nome: p.nome,
@@ -98,13 +107,24 @@ export default async function AdminProdutos({ searchParams }: Props) {
           <h1 className="text-2xl font-headline font-extrabold text-on-surface">Produtos</h1>
           <p className="text-on-surface-variant text-sm mt-1">{totalNum.toLocaleString('pt-BR')} produto{totalNum !== 1 ? 's' : ''}</p>
         </div>
-        <Link
-          href="/admin/produtos/novo"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-sm"
-        >
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          Novo produto
-        </Link>
+        <div className="flex items-center gap-3">
+          {semImagemNum > 0 && !filtroSemImagem && (
+            <Link
+              href="/admin/produtos?semImagem=true&ativo=true"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold border border-amber-600 hover:bg-amber-600 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[15px]">image_not_supported</span>
+              {semImagemNum} sem imagem
+            </Link>
+          )}
+          <Link
+            href="/admin/produtos/novo"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-sm"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            Novo produto
+          </Link>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -125,18 +145,34 @@ export default async function AdminProdutos({ searchParams }: Props) {
           <option value="true">Ativos</option>
           <option value="false">Inativos</option>
         </select>
+        <select
+          name="semImagem"
+          defaultValue={filtroSemImagem ? 'true' : ''}
+          className="px-4 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none"
+        >
+          <option value="">Todas as imagens</option>
+          <option value="true">⚠ Sem imagem</option>
+        </select>
         <button
           type="submit"
           className="px-5 py-2 rounded-xl bg-primary text-on-primary font-bold text-sm"
         >
           Filtrar
         </button>
-        {(busca || filtroAtivo) && (
+        {(busca || filtroAtivo || filtroSemImagem) && (
           <Link href="/admin/produtos" className="px-5 py-2 rounded-xl bg-surface-container text-on-surface-variant font-bold text-sm">
             Limpar
           </Link>
         )}
       </form>
+
+      {/* Banner de filtro ativo */}
+      {filtroSemImagem && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-amber-500 border border-amber-600 rounded-xl text-sm text-white font-medium">
+          <span className="material-symbols-outlined text-[18px]">image_not_supported</span>
+          Mostrando {totalNum} produto{totalNum !== 1 ? 's' : ''} sem imagem — clique em ✏️ para adicionar fotos.
+        </div>
+      )}
 
       {/* Tabela interativa */}
       {rows.length === 0 ? (

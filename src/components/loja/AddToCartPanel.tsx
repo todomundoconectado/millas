@@ -14,9 +14,16 @@ interface Props {
   isKg: boolean
 }
 
+function formatKg(q: number): string {
+  const g = Math.round(q * 1000)
+  if (g < 1000) return `${g}g`
+  const kg = g / 1000
+  return `${kg.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} kg`
+}
+
 export default function AddToCartPanel({ id, nome, slug, preco, precoDe, imagens, isKg }: Props) {
   const addItem = useCart((s) => s.addItem)
-  const [quantidade, setQtd] = useState(1)
+  const [quantidade, setQtd] = useState(isKg ? 0.1 : 1)
   const [added, setAdded] = useState(false)
 
   function handleAdd() {
@@ -31,6 +38,20 @@ export default function AddToCartPanel({ id, nome, slug, preco, precoDe, imagens
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
+  }
+
+  function addKg(delta: number) {
+    setQtd(q => parseFloat((q + delta).toFixed(1)))
+  }
+
+  function decrement() {
+    if (isKg) setQtd(q => parseFloat(Math.max(0.1, q - 0.1).toFixed(1)))
+    else setQtd(q => Math.max(1, q - 1))
+  }
+
+  function increment() {
+    if (isKg) setQtd(q => parseFloat((q + 0.1).toFixed(1)))
+    else setQtd(q => q + 1)
   }
 
   return (
@@ -49,23 +70,46 @@ export default function AddToCartPanel({ id, nome, slug, preco, precoDe, imagens
       <div className="p-6 rounded-xl bg-surface-container-low flex flex-col gap-4">
         <div>
           <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant block mb-3">
-            {isKg ? 'Quantidade (aprox. kg)' : 'Quantidade'}
+            {isKg ? 'Peso desejado' : 'Quantidade'}
           </label>
+
+          {/* Controles ± */}
           <div className="flex items-center gap-0 bg-surface-container-lowest rounded-full border border-outline-variant/20 w-fit">
             <button
-              onClick={() => setQtd(q => Math.max(1, q - 1))}
+              onClick={decrement}
               className="w-12 h-12 flex items-center justify-center text-on-surface hover:text-primary transition-colors rounded-l-full"
             >
               <span className="material-symbols-outlined">remove</span>
             </button>
-            <span className="w-14 text-center font-bold text-lg select-none">{quantidade}</span>
+            <span className="w-20 text-center font-bold text-lg select-none">
+              {isKg ? formatKg(quantidade) : quantidade}
+            </span>
             <button
-              onClick={() => setQtd(q => q + 1)}
+              onClick={increment}
               className="w-12 h-12 flex items-center justify-center text-on-surface hover:text-primary transition-colors rounded-r-full"
             >
               <span className="material-symbols-outlined">add</span>
             </button>
           </div>
+
+          {/* Botões rápidos para kg */}
+          {isKg && (
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {[
+                { label: '+500g', delta: 0.5 },
+                { label: '+1 kg', delta: 1 },
+                { label: '+2 kg', delta: 2 },
+              ].map(({ label, delta }) => (
+                <button
+                  key={label}
+                  onClick={() => addKg(delta)}
+                  className="px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant text-xs font-bold hover:bg-primary-container hover:text-primary transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <button

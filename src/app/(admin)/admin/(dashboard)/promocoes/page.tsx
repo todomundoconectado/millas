@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { promotions, products, categories } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+import DeleteConfirmButton from '@/components/admin/DeleteConfirmButton'
 
 // ── Server Actions ──────────────────────────────────────────────────────────
 
@@ -332,17 +333,11 @@ export default async function AdminPromocoes() {
                         </form>
 
                         {/* Delete */}
-                        <form action={deletePromotion.bind(null, row.id)}>
-                          <button
-                            type="submit"
-                            className="px-3 py-1.5 rounded-lg bg-error/10 text-error text-xs font-bold hover:bg-error/20 transition-colors"
-                            onClick={(e) => {
-                              if (!confirm(`Excluir "${row.nome}"?`)) e.preventDefault()
-                            }}
-                          >
-                            Excluir
-                          </button>
-                        </form>
+                        <DeleteConfirmButton
+                          confirmMessage={`Excluir "${row.nome}"?`}
+                          action={deletePromotion.bind(null, row.id)}
+                          className="px-3 py-1.5 rounded-lg bg-error/10 text-error text-xs font-bold hover:bg-error/20 transition-colors"
+                        />
                       </div>
                     </td>
                   </tr>

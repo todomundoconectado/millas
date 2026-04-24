@@ -65,6 +65,8 @@ export const products = mysqlTable(
     isKg: boolean('is_kg').notNull().default(false),
     estoque: decimal('estoque', { precision: 10, scale: 3 }).notNull().default('0'),
     ativo: boolean('ativo').notNull().default(true),
+    ean: varchar('ean', { length: 50 }),
+    descricaoIa: boolean('descricao_ia').notNull().default(false),
     wooId: varchar('woo_id', { length: 100 }).unique(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
