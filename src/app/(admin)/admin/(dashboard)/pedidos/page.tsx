@@ -3,10 +3,14 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { db } from '@/lib/db'
 import { orders } from '@/lib/db/schema'
-import { eq, desc, sql, gte, and } from 'drizzle-orm'
+import { eq, desc, sql, gte, and, inArray } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 import type { orderStatuses } from '@/lib/db/schema'
+import PedidosTable from './PedidosTable'
 
-const STATUS_LABELS: Record<typeof orderStatuses[number], string> = {
+type Status = typeof orderStatuses[number]
+
+const STATUS_LABELS: Record<Status, string> = {
   pendente: 'Pendente',
   confirmado: 'Confirmado',
   separando: 'Separando',
@@ -15,24 +19,22 @@ const STATUS_LABELS: Record<typeof orderStatuses[number], string> = {
   cancelado: 'Cancelado',
 }
 
-const STATUS_COLORS: Record<typeof orderStatuses[number], string> = {
-  pendente: 'bg-yellow-100 text-yellow-800',
-  confirmado: 'bg-blue-100 text-blue-800',
-  separando: 'bg-purple-100 text-purple-800',
-  saiu_entrega: 'bg-orange-100 text-orange-800',
-  entregue: 'bg-green-100 text-green-800',
-  cancelado: 'bg-red-100 text-red-800',
-}
-
 const PER_PAGE = 30
 
 interface Props {
   searchParams: Promise<{ status?: string; pagina?: string; data?: string }>
 }
 
+async function bulkUpdateStatus(ids: number[], status: Status) {
+  'use server'
+  if (!ids.length) return
+  await db.update(orders).set({ status }).where(inArray(orders.id, ids))
+  revalidatePath('/admin/pedidos')
+}
+
 export default async function AdminPedidos({ searchParams }: Props) {
   const params = await searchParams
-  const filtroStatus = params.status as typeof orderStatuses[number] | undefined
+  const filtroStatus = params.status as Status | undefined
   const filtroHoje = params.data === 'hoje'
   const pagina = parseInt(params.pagina ?? '1')
 
@@ -69,6 +71,16 @@ export default async function AdminPedidos({ searchParams }: Props) {
     return `/admin/pedidos${q.toString() ? `?${q}` : ''}`
   }
 
+  const tableRows = rows.map(o => ({
+    id: o.id,
+    numero: o.numero,
+    clienteNome: o.clienteNome,
+    clienteTelefone: o.clienteTelefone,
+    status: o.status,
+    total: String(o.total),
+    createdAt: o.createdAt,
+  }))
+
   return (
     <div>
       <div className="mb-6">
@@ -94,7 +106,7 @@ export default async function AdminPedidos({ searchParams }: Props) {
         >
           Todos
         </Link>
-        {(Object.keys(STATUS_LABELS) as typeof orderStatuses[number][]).map(s => (
+        {(Object.keys(STATUS_LABELS) as Status[]).map(s => (
           <Link
             key={s}
             href={`/admin/pedidos?status=${s}`}
@@ -107,53 +119,7 @@ export default async function AdminPedidos({ searchParams }: Props) {
         ))}
       </div>
 
-      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 overflow-hidden">
-        {rows.length === 0 ? (
-          <p className="text-on-surface-variant text-sm text-center py-12">Nenhum pedido encontrado.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-outline-variant/20 bg-surface-container">
-                  <th className="text-left px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Pedido</th>
-                  <th className="text-left px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Cliente</th>
-                  <th className="text-center px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Status</th>
-                  <th className="text-right px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Total</th>
-                  <th className="text-right px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider hidden md:table-cell">Data</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/10">
-                {rows.map((o) => (
-                  <tr key={o.id} className="hover:bg-surface-container/50 transition-colors cursor-pointer">
-                    <td className="px-4 py-3">
-                      <Link href={`/admin/pedidos/${o.id}`} className="font-mono text-on-surface font-medium hover:text-primary transition-colors">
-                        #{o.numero}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link href={`/admin/pedidos/${o.id}`} className="block">
-                        <p className="font-medium text-on-surface">{o.clienteNome}</p>
-                        <p className="text-xs text-on-surface-variant">{o.clienteTelefone}</p>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_COLORS[o.status]}`}>
-                        {STATUS_LABELS[o.status]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-on-surface">
-                      {Number(o.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </td>
-                    <td className="px-4 py-3 text-right text-on-surface-variant hidden md:table-cell">
-                      {new Date(o.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <PedidosTable rows={tableRows} bulkUpdateStatus={bulkUpdateStatus} />
 
       {paginas > 1 && (
         <div className="flex items-center justify-center gap-2 mt-6">

@@ -10,7 +10,7 @@ import ProductsTable from './ProductsTable'
 const PER_PAGE = 50
 
 interface Props {
-  searchParams: Promise<{ q?: string; pagina?: string; ativo?: string; semImagem?: string }>
+  searchParams: Promise<{ q?: string; pagina?: string; ativo?: string; semImagem?: string; aguardandoImagem?: string }>
 }
 
 async function updateProductPrice(id: number, preco: string) {
@@ -34,20 +34,30 @@ export default async function AdminProdutos({ searchParams }: Props) {
   const pagina = parseInt(params.pagina ?? '1')
   const filtroAtivo = params.ativo
   const filtroSemImagem = params.semImagem === 'true'
+  const filtroAguardando = params.aguardandoImagem === 'true'
 
   const conditions = []
   if (busca) conditions.push(like(products.nome, `%${busca}%`))
   if (filtroAtivo === 'true') conditions.push(eq(products.ativo, true))
   if (filtroAtivo === 'false') conditions.push(eq(products.ativo, false))
   if (filtroSemImagem) conditions.push(sql`JSON_LENGTH(${products.imagens}) = 0`)
+  if (filtroAguardando) {
+    conditions.push(sql`JSON_LENGTH(${products.imagens}) = 0`)
+    conditions.push(eq(products.ativo, false))
+  }
 
   const where = conditions.length ? and(...conditions) : undefined
 
-  // Count total sem imagem para badge informativo
+  // Counts para badges informativos
   const [{ semImagem }] = await db
     .select({ semImagem: sql<number>`COUNT(*)` })
     .from(products)
     .where(and(eq(products.ativo, true), sql`JSON_LENGTH(${products.imagens}) = 0`))
+
+  const [{ aguardandoImagem }] = await db
+    .select({ aguardandoImagem: sql<number>`COUNT(*)` })
+    .from(products)
+    .where(and(eq(products.ativo, false), sql`JSON_LENGTH(${products.imagens}) = 0`))
 
   const [{ total }] = await db
     .select({ total: sql<number>`COUNT(*)` })
@@ -76,6 +86,7 @@ export default async function AdminProdutos({ searchParams }: Props) {
 
   const totalNum = Number(total)
   const semImagemNum = Number(semImagem)
+  const aguardandoImagemNum = Number(aguardandoImagem)
   const paginas = Math.ceil(totalNum / PER_PAGE)
 
   function pageUrl(p: number) {
@@ -83,6 +94,7 @@ export default async function AdminProdutos({ searchParams }: Props) {
     if (busca) q.set('q', busca)
     if (filtroAtivo) q.set('ativo', filtroAtivo)
     if (filtroSemImagem) q.set('semImagem', 'true')
+    if (filtroAguardando) q.set('aguardandoImagem', 'true')
     if (p > 1) q.set('pagina', String(p))
     return `/admin/produtos${q.toString() ? `?${q}` : ''}`
   }
@@ -108,6 +120,15 @@ export default async function AdminProdutos({ searchParams }: Props) {
           <p className="text-on-surface-variant text-sm mt-1">{totalNum.toLocaleString('pt-BR')} produto{totalNum !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-3">
+          {aguardandoImagemNum > 0 && !filtroAguardando && (
+            <Link
+              href="/admin/produtos?aguardandoImagem=true"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-500 text-white text-xs font-bold border border-orange-600 hover:bg-orange-600 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[15px]">hourglass_empty</span>
+              {aguardandoImagemNum} aguardando imagem
+            </Link>
+          )}
           {semImagemNum > 0 && !filtroSemImagem && (
             <Link
               href="/admin/produtos?semImagem=true&ativo=true"
@@ -151,7 +172,7 @@ export default async function AdminProdutos({ searchParams }: Props) {
           className="px-4 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface text-sm focus:outline-none"
         >
           <option value="">Todas as imagens</option>
-          <option value="true">⚠ Sem imagem</option>
+          <option value="true">⚠ Sem imagem (ativos)</option>
         </select>
         <button
           type="submit"
@@ -159,7 +180,7 @@ export default async function AdminProdutos({ searchParams }: Props) {
         >
           Filtrar
         </button>
-        {(busca || filtroAtivo || filtroSemImagem) && (
+        {(busca || filtroAtivo || filtroSemImagem || filtroAguardando) && (
           <Link href="/admin/produtos" className="px-5 py-2 rounded-xl bg-surface-container text-on-surface-variant font-bold text-sm">
             Limpar
           </Link>
@@ -171,6 +192,12 @@ export default async function AdminProdutos({ searchParams }: Props) {
         <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-amber-500 border border-amber-600 rounded-xl text-sm text-white font-medium">
           <span className="material-symbols-outlined text-[18px]">image_not_supported</span>
           Mostrando {totalNum} produto{totalNum !== 1 ? 's' : ''} sem imagem — clique em ✏️ para adicionar fotos.
+        </div>
+      )}
+      {filtroAguardando && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-orange-500 border border-orange-600 rounded-xl text-sm text-white font-medium">
+          <span className="material-symbols-outlined text-[18px]">hourglass_empty</span>
+          {totalNum} produto{totalNum !== 1 ? 's' : ''} aguardando imagem — chegaram do Mobne sem foto. Clique em ✏️ para fazer upload manual.
         </div>
       )}
 

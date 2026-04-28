@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/admin/cupons', label: 'Cupons', icon: 'confirmation_number' },
   { href: '/admin/banners', label: 'Banners', icon: 'image' },
   { href: '/admin/importar-woo', label: 'Importar imagens', icon: 'download' },
+  { href: '/admin/sync-mobne', label: 'Sync Mobne', icon: 'sync' },
 ]
 
 export default function AdminSidebar() {

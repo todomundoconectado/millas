@@ -261,12 +261,23 @@ export default async function EditarProdutoPage({ params }: Props) {
               <h2 className="text-base font-bold text-on-surface mb-4">Estoque</h2>
               <div className="flex flex-col gap-4">
                 <div>
-                  <label htmlFor="estoque" className={LABEL}>Quantidade em estoque</label>
+                  <label htmlFor="estoque" className={LABEL}>
+                    Quantidade em estoque
+                    {produto.mobneId && (
+                      <span className="ml-2 text-xs text-on-surface-variant font-normal">(sincronizado pelo Mobne)</span>
+                    )}
+                  </label>
                   <input
                     id="estoque" name="estoque" type="number" step="0.001" min="0"
                     defaultValue={String(produto.estoque)}
-                    className={INPUT}
+                    readOnly={!!produto.mobneId}
+                    className={`${INPUT} ${produto.mobneId ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed' : ''}`}
                   />
+                  {produto.mobneId && (
+                    <p className="text-xs text-on-surface-variant mt-1">
+                      Atualizado automaticamente pelo sync. Mínimo de 10 unidades para ativar o produto.
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <input
@@ -284,6 +295,38 @@ export default async function EditarProdutoPage({ params }: Props) {
             {/* Publicação */}
             <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 p-6">
               <h2 className="text-base font-bold text-on-surface mb-4">Publicação</h2>
+
+              {/* Aviso de inativo por estoque baixo */}
+              {produto.mobneId && !produto.ativo && Number(produto.estoque) < 10 && (
+                <div className="flex items-start gap-2 px-4 py-3 mb-4 bg-amber-50 border border-amber-300 rounded-xl">
+                  <span className="material-symbols-outlined text-amber-600 text-[18px] mt-0.5 shrink-0">inventory_2</span>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">
+                      Inativo por estoque insuficiente
+                    </p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      Estoque atual: <strong>{Number(produto.estoque).toFixed(produto.isKg ? 3 : 0)} {produto.isKg ? 'kg' : 'un'}</strong>.
+                      O produto será ativado automaticamente quando o Mobne confirmar estoque ≥ 10.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Aviso de inativo por falta de imagem */}
+              {produto.mobneId && !produto.ativo && Number(produto.estoque) >= 10 && (produto.imagens as string[]).length === 0 && (
+                <div className="flex items-start gap-2 px-4 py-3 mb-4 bg-orange-50 border border-orange-300 rounded-xl">
+                  <span className="material-symbols-outlined text-orange-600 text-[18px] mt-0.5 shrink-0">image_not_supported</span>
+                  <div>
+                    <p className="text-sm font-semibold text-orange-800">
+                      Inativo — aguardando imagem
+                    </p>
+                    <p className="text-xs text-orange-700 mt-0.5">
+                      Estoque suficiente, mas o produto precisa de ao menos uma imagem para ser ativado. Faça upload abaixo.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <input
                   id="ativo" name="ativo" type="checkbox"
@@ -294,6 +337,11 @@ export default async function EditarProdutoPage({ params }: Props) {
                   Produto ativo (visível no site)
                 </label>
               </div>
+              {produto.mobneId && (
+                <p className="text-xs text-on-surface-variant mt-2">
+                  Este produto é gerenciado pelo Mobne. O sync pode alterar o status automaticamente.
+                </p>
+              )}
             </div>
 
             {/* Actions */}

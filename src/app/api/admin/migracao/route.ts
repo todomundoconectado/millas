@@ -1,11 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { sql } from 'drizzle-orm'
 
-export async function GET() {
-  const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get('Authorization')
+  const secret = process.env.CRON_SECRET
+  const cronOk = secret && authHeader === `Bearer ${secret}`
+  const session = cronOk ? null : await auth()
+  if (!cronOk && !session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const results: string[] = []
 
@@ -17,6 +20,18 @@ export async function GET() {
     {
       label: 'products.descricao_ia',
       query: 'ALTER TABLE `products` ADD COLUMN `descricao_ia` boolean NOT NULL DEFAULT false',
+    },
+    {
+      label: 'products.mobne_id',
+      query: 'ALTER TABLE `products` ADD COLUMN `mobne_id` varchar(50) UNIQUE',
+    },
+    {
+      label: 'sync_state (tabela)',
+      query: 'CREATE TABLE IF NOT EXISTS `sync_state` (`key` varchar(50) NOT NULL PRIMARY KEY, `value` bigint NOT NULL DEFAULT 0, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)',
+    },
+    {
+      label: 'categories.mobne_id',
+      query: 'ALTER TABLE `categories` ADD COLUMN `mobne_id` varchar(50)',
     },
   ]
 

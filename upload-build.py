@@ -13,6 +13,7 @@ PASSWORD = 'Millas230@#tt2'
 
 REMOTE_BASE = '/home/u500207944/domains/loja.millas.com.br/nodejs'
 LOCAL_NEXT = r'd:/Sync/TMC/Antigravity/super-millas/.next'
+LOCAL_PUBLIC = r'd:/Sync/TMC/Antigravity/super-millas/public'
 
 def log(msg):
     sys.stdout.buffer.write((msg + '\n').encode('utf-8'))
@@ -69,6 +70,13 @@ def main():
             remote_f = REMOTE_BASE + '/.next/' + fname
             sftp.put(local_f, remote_f)
             log(f'  Uploaded {fname}')
+
+    # Upload public/ (static assets: logo, images, svgs)
+    log('\nUploading public/ ...')
+    local_public = LOCAL_PUBLIC
+    remote_public = REMOTE_BASE + '/public'
+    count = sftp_put_dir(sftp, local_public, remote_public)
+    log(f'Done: {count} files uploaded to public/')
 
     sftp.close()
 

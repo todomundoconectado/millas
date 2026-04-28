@@ -1,5 +1,6 @@
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'edge') return
+  if (process.env.NEXT_RUNTIME !== 'nodejs') return
+  if (process.env.NODE_ENV !== 'production') return
 
   // ── Symlink para imagens persistentes ──────────────────────────────────────
   // A Hostinger recria o diretório nodejs/ a cada deploy, apagando arquivos locais.
@@ -35,16 +36,31 @@ export async function register() {
     console.warn('[BOOT] Symlink de imagens falhou (OK em dev):', err)
   }
 
-  // ── Seed do usuário admin ──────────────────────────────────────────────────
-  const { db } = await import('@/lib/db')
-  const { users } = await import('@/lib/db/schema')
-  const { eq } = await import('drizzle-orm')
-  const bcrypt = await import('bcryptjs')
+  // ── Scheduler interno: sync Mobne a cada 10 minutos ──────────────────────
+  const SYNC_URL = `${process.env.NEXTAUTH_URL ?? 'http://localhost:3000'}/api/cron/sync-mobne`
 
-  const email = 'contato@millas.com.br'
-  const senha = 'Millas2026!'
+  async function runSync() {
+    try {
+      await fetch(SYNC_URL, {
+        headers: { Authorization: `Bearer ${process.env.CRON_SECRET ?? ''}` },
+      })
+    } catch { /* ignora falhas de rede */ }
+  }
 
+  // Aguarda 2 min após o boot para o app estar totalmente pronto
+  setTimeout(runSync, 2 * 60 * 1000)
+  setInterval(runSync, 10 * 60 * 1000)
+
+  // ── Seed do usuário admin ─────────────────────────────────────────────────
   try {
+    const { db } = await import('@/lib/db')
+    const { users } = await import('@/lib/db/schema')
+    const { eq } = await import('drizzle-orm')
+    const bcrypt = await import('bcryptjs')
+
+    const email = 'contato@millas.com.br'
+    const senha = 'Millas2026!'
+
     const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1)
     if (!existing) {
       const hash = await bcrypt.hash(senha, 12)
@@ -58,6 +74,6 @@ export async function register() {
       console.log('[BOOT] Admin criado:', email)
     }
   } catch {
-    // Tabela pode não existir ainda
+    // DB indisponível em dev ou tabela ainda não existe
   }
 }

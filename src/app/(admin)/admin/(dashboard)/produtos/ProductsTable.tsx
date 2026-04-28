@@ -108,7 +108,7 @@ export default function ProductsTable({ rows, updatePrice, bulkToggle }: Props) 
                 <th className="text-left px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Produto</th>
                 <th className="text-left px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider hidden md:table-cell">Categoria</th>
                 <th className="text-right px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Preço</th>
-                <th className="text-right px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider hidden sm:table-cell">Estoque</th>
+                <th className="text-right px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Estoque</th>
                 <th className="text-center px-4 py-3 font-bold text-on-surface-variant text-xs uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 w-10" />
               </tr>
@@ -189,8 +189,20 @@ export default function ProductsTable({ rows, updatePrice, bulkToggle }: Props) 
                         </p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right text-on-surface-variant hidden sm:table-cell">
-                      {Number(p.estoque).toLocaleString('pt-BR')} {p.isKg ? 'kg' : 'un'}
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {(() => {
+                        const qtd = Number(p.estoque)
+                        const color = qtd === 0
+                          ? 'text-error font-bold'
+                          : qtd < 10
+                          ? 'text-amber-600 font-semibold'
+                          : 'text-green-700 font-semibold'
+                        return (
+                          <span className={color}>
+                            {qtd.toLocaleString('pt-BR', { maximumFractionDigits: p.isKg ? 3 : 0 })} {p.isKg ? 'kg' : 'un'}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${

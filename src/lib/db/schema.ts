@@ -5,6 +5,7 @@ import {
   decimal,
   boolean,
   int,
+  bigint,
   timestamp,
   json,
   index,
@@ -45,6 +46,7 @@ export const categories = mysqlTable('categories', {
   imagemUrl: text('imagem_url'),
   ordem: int('ordem').notNull().default(0),
   ativo: boolean('ativo').notNull().default(true),
+  mobneId: varchar('mobne_id', { length: 50 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -68,12 +70,14 @@ export const products = mysqlTable(
     ean: varchar('ean', { length: 50 }),
     descricaoIa: boolean('descricao_ia').notNull().default(false),
     wooId: varchar('woo_id', { length: 100 }).unique(),
+    mobneId: varchar('mobne_id', { length: 50 }).unique(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
   },
   (t) => [
     index('products_slug_idx').on(t.slug),
     index('products_woo_id_idx').on(t.wooId),
+    index('products_mobne_id_idx').on(t.mobneId),
     index('products_categoria_id_idx').on(t.categoriaId),
     index('products_ativo_idx').on(t.ativo),
   ]
@@ -213,6 +217,14 @@ export const productAffinities = mysqlTable(
   ]
 )
 
+// ── Sync State (cursores de sync incremental com sistemas externos) ────────
+
+export const syncState = mysqlTable('sync_state', {
+  key:       varchar('key', { length: 50 }).primaryKey(),
+  value:     bigint('value', { mode: 'number' }).notNull().default(0),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+})
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type User = typeof users.$inferSelect
@@ -228,3 +240,4 @@ export type OrderItem = typeof orderItems.$inferSelect
 export type Banner = typeof banners.$inferSelect
 export type ScheduledUpdate = typeof scheduledUpdates.$inferSelect
 export type ProductAffinity = typeof productAffinities.$inferSelect
+export type SyncState = typeof syncState.$inferSelect

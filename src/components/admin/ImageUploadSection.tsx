@@ -8,38 +8,72 @@ interface Props {
   updateImagesAction: (formData: FormData) => Promise<void>
 }
 
+const MIN_WIDTH = 600
+const MIN_HEIGHT = 600
+
+function checkImageResolution(file: File): Promise<{ width: number; height: number }> {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }) }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve({ width: 0, height: 0 }) }
+    img.src = url
+  })
+}
+
 export default function ImageUploadSection({ productId, currentImages, updateImagesAction }: Props) {
   const [images, setImages] = useState<string[]>(currentImages)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [lowResWarning, setLowResWarning] = useState<{ file: File; width: number; height: number } | null>(null)
+
+  async function uploadFile(file: File) {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('pasta', `produtos/${productId}`)
+    const res = await fetch('/api/admin/imagens', { method: 'POST', body: fd })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error ?? 'Erro ao fazer upload')
+    return data.url as string
+  }
 
   async function handleFiles(files: FileList) {
     setError(null)
-    setUploading(true)
     const uploaded: string[] = []
 
     for (const file of Array.from(files)) {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('pasta', `produtos/${productId}`)
+      const { width, height } = await checkImageResolution(file)
 
-      try {
-        const res = await fetch('/api/admin/imagens', { method: 'POST', body: fd })
-        const data = await res.json()
-        if (!res.ok) {
-          setError(data.error ?? 'Erro ao fazer upload')
-          continue
-        }
-        uploaded.push(data.url)
-      } catch {
-        setError('Falha de rede ao enviar imagem')
+      if (width > 0 && (width < MIN_WIDTH || height < MIN_HEIGHT)) {
+        // Pausar e perguntar sobre baixa resolução
+        setLowResWarning({ file, width, height })
+        return // processa um arquivo por vez quando há aviso
       }
+
+      setUploading(true)
+      try {
+        uploaded.push(await uploadFile(file))
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Falha de rede ao enviar imagem')
+      }
+      setUploading(false)
     }
 
-    if (uploaded.length > 0) {
-      setImages(prev => [...prev, ...uploaded])
+    if (uploaded.length > 0) setImages(prev => [...prev, ...uploaded])
+  }
+
+  async function confirmLowRes() {
+    if (!lowResWarning) return
+    const file = lowResWarning.file
+    setLowResWarning(null)
+    setUploading(true)
+    try {
+      const url = await uploadFile(file)
+      setImages(prev => [...prev, url])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha de rede ao enviar imagem')
     }
     setUploading(false)
   }
@@ -71,10 +105,45 @@ export default function ImageUploadSection({ productId, currentImages, updateIma
   return (
     <div className="mt-6 bg-surface-container-lowest rounded-2xl border border-outline-variant/20 p-6">
       <h2 className="text-base font-bold text-on-surface mb-1">Imagens</h2>
-      <p className="text-xs text-on-surface-variant mb-4">
+      <p className="text-xs text-on-surface-variant mb-1">
         Upload automático — converte para WebP otimizado. Arraste ou clique para adicionar.
         A primeira imagem é a principal.
       </p>
+      <div className="flex flex-wrap gap-3 mb-4 text-xs text-on-surface-variant bg-surface-container rounded-xl px-4 py-2.5">
+        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px] text-primary">check_circle</span> Mínimo 600×600 px</span>
+        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px] text-primary">check_circle</span> Fundo branco ou neutro</span>
+        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px] text-primary">check_circle</span> Produto centralizado</span>
+        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px] text-primary">check_circle</span> JPG, PNG ou WebP</span>
+      </div>
+
+      {/* Aviso de baixa resolução */}
+      {lowResWarning && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl">
+          <p className="text-sm font-semibold text-amber-800 mb-1 flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">warning</span>
+            Imagem com baixa resolução ({lowResWarning.width}×{lowResWarning.height} px)
+          </p>
+          <p className="text-xs text-amber-700 mb-3">
+            Recomendamos no mínimo {MIN_WIDTH}×{MIN_HEIGHT} px para boa qualidade na loja. Imagens pequenas podem ficar pixeladas ou borradas.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={confirmLowRes}
+              className="px-4 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors"
+            >
+              Adicionar mesmo assim
+            </button>
+            <button
+              type="button"
+              onClick={() => setLowResWarning(null)}
+              className="px-4 py-1.5 rounded-lg bg-surface-container text-on-surface-variant text-xs font-bold hover:bg-surface-container-high transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Drop zone */}
       <div
