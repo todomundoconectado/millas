@@ -109,10 +109,10 @@ export default function Navbar() {
         }`}
       >
         <div className="max-w-screen-xl mx-auto px-4 md:px-8">
-          <div className="flex items-center gap-4 h-16 md:h-20">
+          <div className="flex items-center gap-4 h-20 md:h-24">
             {/* Logo */}
             <Link href="/" className="flex items-center shrink-0">
-              <Image src="/logo-millas.png" alt="Super Millas" width={200} height={64} className="h-14 w-auto object-contain" />
+              <Image src="/logo-millas.png" alt="Super Millas" width={240} height={80} className="h-16 md:h-20 w-auto object-contain" />
             </Link>
 
             {/* Nav desktop */}
