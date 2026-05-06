@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { products } from '@/lib/db/schema'
-import { eq, or } from 'drizzle-orm'
+import { eq, isNotNull, or, sql } from 'drizzle-orm'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { extname } from 'path'
@@ -19,16 +19,51 @@ function err2str(e: unknown) {
   return e instanceof Error ? e.message : String(e)
 }
 
+async function checkAuth(request: NextRequest): Promise<boolean> {
+  const cronSecret = process.env.CRON_SECRET
+  const header = request.headers.get('x-cron-secret')
+  if (cronSecret && header === cronSecret) return true
+  const session = await auth()
+  return !!session
+}
+
+// GET — estatísticas (produtos com woo_id sem imagem)
+export async function GET(request: NextRequest) {
+  if (!await checkAuth(request)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const [totalWoo] = await db
+    .select({ n: sql<number>`COUNT(*)` })
+    .from(products)
+    .where(isNotNull(products.wooId))
+
+  const [semImagem] = await db
+    .select({ n: sql<number>`COUNT(*)` })
+    .from(products)
+    .where(sql`${products.wooId} IS NOT NULL AND (${products.imagens} IS NULL OR JSON_LENGTH(${products.imagens}) = 0)`)
+
+  return NextResponse.json({
+    totalWoo: Number(totalWoo.n),
+    semImagem: Number(semImagem.n),
+    comImagem: Number(totalWoo.n) - Number(semImagem.n),
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!await checkAuth(request)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const body = await request.json()
-    const { page = 1, perPage = 8, somenteSemImagem = true, wooUrl, ck, cs } = body
+    const {
+      page = 1,
+      perPage = 8,
+      somenteSemImagem = true,
+      wooUrl = process.env.WOOCOMMERCE_URL,
+      ck = process.env.WOOCOMMERCE_KEY,
+      cs = process.env.WOOCOMMERCE_SECRET,
+    } = body
 
     if (!wooUrl || !ck || !cs) {
-      return NextResponse.json({ error: 'Credenciais necessárias' }, { status: 400 })
+      return NextResponse.json({ error: 'Credenciais WooCommerce não configuradas' }, { status: 400 })
     }
 
     const basicAuth = Buffer.from(`${ck}:${cs}`).toString('base64')

@@ -71,19 +71,20 @@ async function tryCosmos(ean: string, productId: number): Promise<string | null>
 }
 
 // Open Food Facts — gratuito, colaborativo (sem key)
+// Nota: cobertura focada em produtos europeus/americanos; produtos brasileiros (789xxx) têm baixa cobertura
 async function tryOpenFoodFacts(ean: string, productId: number): Promise<string | null> {
   try {
     const res = await fetch(
-      `https://world.openfoodfacts.net/api/v2/product/${ean}?fields=selected_images`,
-      { headers: { Accept: 'application/json' } },
+      `https://world.openfoodfacts.org/api/v2/product/${ean}?fields=image_front_url,image_url`,
+      { headers: { Accept: 'application/json', 'User-Agent': 'SuperMillas/1.0 (contato@supermillas.com.br)' } },
     )
     if (!res.ok) return null
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data: any = await res.json()
-    const front = data?.product?.selected_images?.front?.display
-    const url: string | undefined = front?.pt ?? front?.en ?? front?.fr ?? Object.values(front ?? {})[0]
+    if (data?.status !== 1) return null
+    const url: string | undefined = data?.product?.image_front_url ?? data?.product?.image_url
     if (!url) return null
-    return downloadAndSave(url as string, productId)
+    return downloadAndSave(url, productId)
   } catch {
     return null
   }

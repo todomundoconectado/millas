@@ -9,9 +9,11 @@ import { revalidatePath } from 'next/cache'
 import ImageUploadSection from '@/components/admin/ImageUploadSection'
 import DescricaoField from '@/components/admin/DescricaoField'
 import { parseImagens } from '@/lib/db/queries/products'
+import { buscarImagemPorEAN } from '@/lib/ean-images'
 
 interface Props {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ ean?: string }>
 }
 
 async function getActiveCategories() {
@@ -93,8 +95,36 @@ async function updateImages(id: number, formData: FormData) {
   revalidatePath(`/produtos`)
 }
 
-export default async function EditarProdutoPage({ params }: Props) {
+async function buscarEanAction(id: number) {
+  'use server'
+
+  const [produto] = await db
+    .select({ ean: products.ean, estoque: products.estoque })
+    .from(products)
+    .where(eq(products.id, id))
+    .limit(1)
+
+  if (!produto?.ean) redirect(`/admin/produtos/${id}?ean=sem-ean`)
+
+  try {
+    const result = await buscarImagemPorEAN(produto.ean, id)
+    if (result) {
+      const ativo = Number(produto.estoque) >= 10
+      await db.update(products).set({ imagens: [result.localPath], ativo }).where(eq(products.id, id))
+      revalidatePath(`/admin/produtos/${id}`)
+      revalidatePath('/admin/produtos')
+      redirect(`/admin/produtos/${id}?ean=ok`)
+    } else {
+      redirect(`/admin/produtos/${id}?ean=nao-encontrado`)
+    }
+  } catch {
+    redirect(`/admin/produtos/${id}?ean=erro`)
+  }
+}
+
+export default async function EditarProdutoPage({ params, searchParams }: Props) {
   const { id: idStr } = await params
+  const { ean: eanResult } = await searchParams
   const id = parseInt(idStr, 10)
   if (isNaN(id)) notFound()
 
@@ -116,6 +146,7 @@ export default async function EditarProdutoPage({ params }: Props) {
 
   const updateAction = updateProduct.bind(null, id)
   const updateImagesAction = updateImages.bind(null, id)
+  const buscarEanBoundAction = buscarEanAction.bind(null, id)
 
   return (
     <div>
@@ -141,6 +172,25 @@ export default async function EditarProdutoPage({ params }: Props) {
           </Link>
         </div>
       </div>
+
+      {eanResult === 'ok' && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-green-50 border border-green-300 rounded-xl text-green-800 text-sm font-medium">
+          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+          Imagem encontrada e salva com sucesso.
+        </div>
+      )}
+      {eanResult === 'nao-encontrado' && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-800 text-sm font-medium">
+          <span className="material-symbols-outlined text-[18px]">image_search</span>
+          Nenhuma imagem encontrada para este EAN nas fontes disponíveis.
+        </div>
+      )}
+      {(eanResult === 'erro' || eanResult === 'sem-ean') && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-red-50 border border-red-300 rounded-xl text-red-800 text-sm font-medium">
+          <span className="material-symbols-outlined text-[18px]">error</span>
+          {eanResult === 'sem-ean' ? 'Este produto não tem EAN cadastrado.' : 'Erro ao buscar imagem. Tente novamente.'}
+        </div>
+      )}
 
       <form action={updateAction}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -368,6 +418,25 @@ export default async function EditarProdutoPage({ params }: Props) {
         currentImages={parseImagens(produto.imagens)}
         updateImagesAction={updateImagesAction}
       />
+
+      {produto.ean && (produto.imagens as string[]).length === 0 && (
+        <div className="mt-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/20 p-6">
+          <h2 className="text-base font-bold text-on-surface mb-1">Buscar imagem por EAN</h2>
+          <p className="text-sm text-on-surface-variant mb-4">
+            EAN: <span className="font-mono font-semibold text-on-surface">{produto.ean}</span>
+            {' '}— Tenta encontrar automaticamente uma imagem nas bases Open Food Facts, Cosmos e GS1.
+          </p>
+          <form action={buscarEanBoundAction}>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm"
+            >
+              <span className="material-symbols-outlined text-[18px]">image_search</span>
+              Buscar imagem por EAN
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

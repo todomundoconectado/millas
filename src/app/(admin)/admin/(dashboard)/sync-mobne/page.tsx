@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface SyncResult {
   ok?: boolean
@@ -50,6 +50,22 @@ export default function SyncMobnePage() {
   const [diagLoading, setDiagLoading] = useState(false)
   const [fixResult, setFixResult] = useState<FixResult | null>(null)
   const [fixing, setFixing] = useState(false)
+
+  // EAN image import
+  const [eanStats, setEanStats] = useState<{ semImagem: number; totalComEan: number; comImagem: number } | null>(null)
+  const [eanRunning, setEanRunning] = useState(false)
+  const [eanProgress, setEanProgress] = useState<{ processados: number; encontradas: number; total: number } | null>(null)
+  const [eanLog, setEanLog] = useState<string[]>([])
+  const [eanDone, setEanDone] = useState(false)
+  const eanCancelRef = useRef(false)
+
+  // WooCommerce image import
+  const [wooStats, setWooStats] = useState<{ semImagem: number; totalWoo: number; comImagem: number } | null>(null)
+  const [wooRunning, setWooRunning] = useState(false)
+  const [wooProgress, setWooProgress] = useState<{ importadas: number; pagAtual: number; totalPags: number } | null>(null)
+  const [wooLog, setWooLog] = useState<string[]>([])
+  const [wooDone, setWooDone] = useState(false)
+  const wooCancelRef = useRef(false)
 
   function addLog(line: string) {
     setLog(prev => [...prev.slice(-100), line])
@@ -106,9 +122,133 @@ export default function SyncMobnePage() {
     setDiagLoading(false)
   }
 
+  async function loadEanStats() {
+    try {
+      const res = await fetch('/api/admin/importar-imagens-ean')
+      if (res.ok) setEanStats(await res.json())
+    } catch { /* silencioso */ }
+  }
+
+  async function loadWooStats() {
+    try {
+      const res = await fetch('/api/admin/importar-woo')
+      if (res.ok) setWooStats(await res.json())
+    } catch { /* silencioso */ }
+  }
+
+  async function runWooImport() {
+    wooCancelRef.current = false
+    setWooRunning(true)
+    setWooDone(false)
+    setWooProgress(null)
+    setWooLog([])
+    let page = 1
+    let totalImportadas = 0
+
+    try {
+      while (true) {
+        if (wooCancelRef.current) {
+          setWooLog(l => [...l, '⏹ Processo cancelado pelo usuário.'])
+          break
+        }
+
+        const res = await fetch('/api/admin/importar-woo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ page, perPage: 20, somenteSemImagem: true }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+          setWooLog(l => [...l, `❌ ${err.error || `HTTP ${res.status}`}`])
+          break
+        }
+        const data = await res.json()
+
+        totalImportadas += data.imported ?? 0
+        setWooProgress({ importadas: totalImportadas, pagAtual: data.page, totalPags: data.totalPages })
+
+        const logLine = `Pág ${data.page}/${data.totalPages} — ${data.imported} importadas, ${data.noMatch} sem match, ${data.skippedJaTemImagem} já tinham imagem`
+        setWooLog(l => [...l.slice(-200), logLine])
+        if (data.errors?.length) {
+          data.errors.slice(0, 3).forEach((e: string) => setWooLog(l => [...l, `  ⚠ ${e.slice(0, 80)}`]))
+        }
+
+        if (data.done) break
+        page = (data.page ?? page) + 1
+      }
+    } catch (e) {
+      setWooLog(l => [...l, `❌ ${e instanceof Error ? e.message : String(e)}`])
+    }
+
+    setWooRunning(false)
+    setWooDone(true)
+    await loadWooStats()
+    await loadDiag()
+  }
+
+  function cancelWooImport() {
+    wooCancelRef.current = true
+  }
+
+  async function runEanImport() {
+    eanCancelRef.current = false
+    setEanRunning(true)
+    setEanDone(false)
+    setEanProgress(null)
+    setEanLog([])
+    let offset = 0
+    let totalEncontradas = 0
+    let totalProcessados = 0
+
+    try {
+      while (true) {
+        if (eanCancelRef.current) {
+          setEanLog(l => [...l, '⏹ Processo cancelado pelo usuário.'])
+          break
+        }
+
+        const res = await fetch('/api/admin/importar-imagens-ean', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ offset, limite: 20 }),
+        })
+        if (!res.ok) { setEanLog(l => [...l, `❌ Erro HTTP ${res.status}`]); break }
+        const data = await res.json()
+
+        totalProcessados += data.processados
+        totalEncontradas += data.encontradas
+        setEanProgress({ processados: totalProcessados, encontradas: totalEncontradas, total: data.total })
+
+        for (const r of data.resultados ?? []) {
+          if (r.ok) {
+            setEanLog(l => [...l.slice(-200), `✓ #${r.id} ${r.nome.slice(0, 40)} → ${r.fonte}`])
+          } else {
+            setEanLog(l => [...l.slice(-200), `✗ #${r.id} ${r.nome.slice(0, 40)} → ${r.motivo}`])
+          }
+        }
+
+        if (data.concluido) break
+        offset = data.proximo
+      }
+    } catch (e) {
+      setEanLog(l => [...l, `❌ ${e instanceof Error ? e.message : String(e)}`])
+    }
+
+    setEanRunning(false)
+    setEanDone(true)
+    await loadEanStats()
+    await loadDiag()
+  }
+
+  function cancelEanImport() {
+    eanCancelRef.current = true
+  }
+
   useEffect(() => {
     loadPointers()
     loadDiag()
+    loadEanStats()
+    loadWooStats()
   }, [])
 
   return (
@@ -297,6 +437,153 @@ export default function SyncMobnePage() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Buscar imagens por EAN */}
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 p-6">
+          <h2 className="text-sm font-bold text-on-surface mb-2">Buscar imagens por EAN</h2>
+          <p className="text-xs text-on-surface-variant mb-4">
+            Consulta o Open Food Facts para cada produto com código de barras sem imagem.
+            Gratuito e sem cadastro — melhor cobertura para alimentos industrializados.
+          </p>
+
+          {eanStats && (
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-surface-container rounded-xl px-4 py-2 text-center">
+                <p className="text-xl font-bold text-on-surface tabular-nums">{eanStats.semImagem.toLocaleString('pt-BR')}</p>
+                <p className="text-xs text-on-surface-variant">com EAN sem imagem</p>
+              </div>
+              <div className="bg-surface-container rounded-xl px-4 py-2 text-center">
+                <p className="text-xl font-bold text-primary tabular-nums">{eanStats.comImagem.toLocaleString('pt-BR')}</p>
+                <p className="text-xs text-on-surface-variant">já têm imagem</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={runEanImport}
+              disabled={eanRunning || eanStats?.semImagem === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-sm disabled:opacity-50"
+            >
+              <span className={`material-symbols-outlined text-[18px] ${eanRunning ? 'animate-spin' : ''}`}>image_search</span>
+              {eanRunning ? 'Buscando...' : `Buscar imagens por EAN`}
+            </button>
+            {eanRunning && (
+              <button
+                onClick={cancelEanImport}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-error text-on-error font-bold text-sm"
+              >
+                <span className="material-symbols-outlined text-[18px]">stop</span>
+                Cancelar
+              </button>
+            )}
+          </div>
+
+          {/* Progresso */}
+          {eanProgress && (
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs text-on-surface-variant">
+                <span>{eanProgress.processados} / {eanProgress.total} processados</span>
+                <span className="text-primary font-semibold">{eanProgress.encontradas} imagens encontradas</span>
+              </div>
+              <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min((eanProgress.processados / (eanProgress.total || 1)) * 100, 100)}%` }}
+                />
+              </div>
+              {eanDone && (
+                <p className="text-xs font-semibold text-green-700">
+                  ✓ Concluído — {eanProgress.encontradas} imagens de {eanProgress.processados} produtos processados
+                  ({eanProgress.total - eanProgress.encontradas > 0 ? `${eanProgress.total - eanProgress.encontradas} não encontrados` : 'todos encontrados'})
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Log */}
+          {eanLog.length > 0 && (
+            <div className="mt-3 max-h-48 overflow-y-auto rounded-xl bg-surface-container p-3 flex flex-col gap-0.5">
+              {eanLog.map((line, i) => (
+                <p key={i} className={`text-xs font-mono ${line.startsWith('✓') ? 'text-green-700' : line.startsWith('✗') ? 'text-amber-700' : 'text-error'}`}>
+                  {line}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Importar imagens do WooCommerce */}
+        <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 p-6">
+          <h2 className="text-sm font-bold text-on-surface mb-2">Importar imagens do WooCommerce</h2>
+          <p className="text-xs text-on-surface-variant mb-4">
+            Baixa as imagens originais do site antigo (millas.com.br) para produtos que já têm woo_id vinculado.
+            Mais rápido e confiável do que buscar por EAN — usa o link direto do WooCommerce.
+          </p>
+
+          {wooStats && (
+            <div className="flex items-center gap-4 mb-4">
+              <div className="bg-surface-container rounded-xl px-4 py-2 text-center">
+                <p className="text-xl font-bold text-on-surface tabular-nums">{wooStats.semImagem.toLocaleString('pt-BR')}</p>
+                <p className="text-xs text-on-surface-variant">woo_id sem imagem</p>
+              </div>
+              <div className="bg-surface-container rounded-xl px-4 py-2 text-center">
+                <p className="text-xl font-bold text-primary tabular-nums">{wooStats.comImagem.toLocaleString('pt-BR')}</p>
+                <p className="text-xs text-on-surface-variant">já importadas</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={runWooImport}
+              disabled={wooRunning || wooStats?.semImagem === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-on-secondary font-bold text-sm disabled:opacity-50"
+            >
+              <span className={`material-symbols-outlined text-[18px] ${wooRunning ? 'animate-spin' : ''}`}>cloud_download</span>
+              {wooRunning ? 'Importando...' : 'Importar imagens WooCommerce'}
+            </button>
+            {wooRunning && (
+              <button
+                onClick={cancelWooImport}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-error text-on-error font-bold text-sm"
+              >
+                <span className="material-symbols-outlined text-[18px]">stop</span>
+                Cancelar
+              </button>
+            )}
+          </div>
+
+          {wooProgress && (
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs text-on-surface-variant">
+                <span>Página {wooProgress.pagAtual} de {wooProgress.totalPags}</span>
+                <span className="text-secondary font-semibold">{wooProgress.importadas} imagens importadas</span>
+              </div>
+              <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-secondary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min((wooProgress.pagAtual / (wooProgress.totalPags || 1)) * 100, 100)}%` }}
+                />
+              </div>
+              {wooDone && (
+                <p className="text-xs font-semibold text-green-700">
+                  ✓ Concluído — {wooProgress.importadas} imagens importadas do WooCommerce
+                </p>
+              )}
+            </div>
+          )}
+
+          {wooLog.length > 0 && (
+            <div className="mt-3 max-h-48 overflow-y-auto rounded-xl bg-surface-container p-3 flex flex-col gap-0.5">
+              {wooLog.map((line, i) => (
+                <p key={i} className={`text-xs font-mono ${line.startsWith('❌') ? 'text-error' : line.startsWith('  ⚠') ? 'text-amber-700' : 'text-on-surface-variant'}`}>
+                  {line}
+                </p>
+              ))}
             </div>
           )}
         </div>
