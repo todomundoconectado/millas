@@ -40,9 +40,9 @@ export default async function AdminProdutos({ searchParams }: Props) {
   if (busca) conditions.push(like(products.nome, `%${busca}%`))
   if (filtroAtivo === 'true') conditions.push(eq(products.ativo, true))
   if (filtroAtivo === 'false') conditions.push(eq(products.ativo, false))
-  if (filtroSemImagem) conditions.push(sql`JSON_LENGTH(${products.imagens}) = 0`)
+  if (filtroSemImagem) conditions.push(sql`(${products.imagens} IS NULL OR JSON_LENGTH(${products.imagens}) = 0)`)
   if (filtroAguardando) {
-    conditions.push(sql`JSON_LENGTH(${products.imagens}) = 0`)
+    conditions.push(sql`(${products.imagens} IS NULL OR JSON_LENGTH(${products.imagens}) = 0)`)
     conditions.push(eq(products.ativo, false))
   }
 
