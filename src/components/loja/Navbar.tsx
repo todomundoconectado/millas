@@ -7,7 +7,7 @@ import { useCart } from '@/lib/store/cart'
 import { useState, useEffect, useRef } from 'react'
 
 const categories = [
-  { label: "Cestas Milla's", href: '/produtos?categoria=cestas-millas' },
+  { label: "Cestas Milla's", href: '/produtos?categoria=2-cestas' },
   { label: 'Hortifruti', href: '/produtos?categoria=hortifruti' },
   { label: 'Carnes', href: '/produtos?categoria=carnes' },
   { label: 'Laticínios', href: '/produtos?categoria=laticinios' },
@@ -166,7 +166,7 @@ export default function Navbar() {
                       onMouseDown={() => {
                         setShowSugestoes(false)
                         setSearch('')
-                        router.push(`/produto/${s.slug}`)
+                        router.push(`/produtos/${s.slug}`)
                       }}
                       className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-surface-container transition-colors"
                     >

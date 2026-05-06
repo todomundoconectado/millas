@@ -70,7 +70,7 @@ export default async function HomePage() {
                 Ver todos os produtos
               </Link>
               <Link
-                href="/produtos?categoria=cestas-millas"
+                href="/produtos?categoria=2-cestas"
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-on-primary/10 text-on-primary font-bold text-base hover:bg-on-primary/20 transition-colors border border-on-primary/20"
               >
                 Cestas Milla&apos;s
@@ -117,7 +117,7 @@ export default async function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
               {/* Cestas Milla's — item fixo sempre em primeiro */}
               <Link
-                href="/produtos?categoria=cestas-millas"
+                href="/produtos?categoria=2-cestas"
                 className="flex flex-col items-center gap-3 p-5 rounded-xl bg-amber-50 hover:shadow-md transition-shadow group"
               >
                 <Image src="/logo-millas.png" alt="Cestas Milla's" width={40} height={40} className="w-10 h-10 object-contain" />
