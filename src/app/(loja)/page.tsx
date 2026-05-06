@@ -1,14 +1,16 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import ProductCard from '@/components/loja/ProductCard'
+import ClubeMillas from '@/components/loja/ClubeMillas'
 import { listOffers } from '@/lib/db/queries/products'
 import { listCategories } from '@/lib/db/queries/categories'
 
 const TRUST_ITEMS = [
   { icon: 'local_shipping', title: 'Entrega rápida', desc: 'Produtos frescos na sua porta' },
   { icon: 'verified', title: 'Qualidade garantida', desc: 'Selecionados com cuidado' },
-  { icon: 'inventory_2', title: '5 mil+ produtos', desc: 'Tudo que você precisa, num lugar só' },
+  { icon: 'shopping_bag', title: 'Pedido mínimo', desc: 'R$ 100 para entrega' },
 ]
 
 function categoryEmoji(nome: string): string {
@@ -39,12 +41,12 @@ export default async function HomePage() {
     listCategories(),
   ])
 
-  const topCategorias = categorias.slice(0, 8)
+  const topCategorias = categorias.slice(0, 7)
 
   return (
     <div className="flex flex-col gap-0">
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden bg-primary min-h-[480px] md:min-h-[560px] flex items-center">
+      <section className="relative overflow-hidden bg-primary min-h-screen flex items-center">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-primary-fixed blur-3xl" />
           <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-primary-fixed blur-3xl" />
@@ -52,16 +54,12 @@ export default async function HomePage() {
 
         <div className="relative max-w-screen-xl mx-auto px-4 md:px-8 py-16 md:py-24 w-full">
           <div className="max-w-2xl">
-            <p className="text-primary-fixed font-label font-semibold text-sm uppercase tracking-widest mb-4">
-              Supermercado Online
-            </p>
             <h1 className="text-4xl md:text-6xl font-headline font-extrabold text-on-primary leading-tight mb-6">
               Tudo que você precisa,{' '}
               <span className="text-primary-fixed">na palma da mão</span>
             </h1>
             <p className="text-on-primary/80 text-lg mb-8 max-w-md">
-              Mais de 5 mil produtos com entrega rápida diretamente na sua porta.
-              Frutas frescas, carnes selecionadas e muito mais.
+              Qualidade e tradição na cidade de Matão. Agora online para você e toda sua família, vem pro Milla&apos;s!
             </p>
             <div className="flex gap-3 flex-wrap">
               <Link
@@ -71,14 +69,12 @@ export default async function HomePage() {
                 <span className="material-symbols-outlined text-[20px]">storefront</span>
                 Ver todos os produtos
               </Link>
-              {topCategorias[0] && (
-                <Link
-                  href={`/produtos?categoria=${topCategorias[0].slug}`}
-                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-on-primary/10 text-on-primary font-bold text-base hover:bg-on-primary/20 transition-colors border border-on-primary/20"
-                >
-                  {topCategorias[0].nome}
-                </Link>
-              )}
+              <Link
+                href="/produtos?categoria=cestas-millas"
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-on-primary/10 text-on-primary font-bold text-base hover:bg-on-primary/20 transition-colors border border-on-primary/20"
+              >
+                Cestas Milla&apos;s
+              </Link>
             </div>
           </div>
         </div>
@@ -119,6 +115,16 @@ export default async function HomePage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+              {/* Cestas Milla's — item fixo sempre em primeiro */}
+              <Link
+                href="/produtos?categoria=cestas-millas"
+                className="flex flex-col items-center gap-3 p-5 rounded-xl bg-amber-50 hover:shadow-md transition-shadow group"
+              >
+                <Image src="/logo-millas.png" alt="Cestas Milla's" width={40} height={40} className="w-10 h-10 object-contain" />
+                <span className="font-headline font-bold text-xs text-on-surface text-center leading-snug">
+                  Cestas Milla&apos;s
+                </span>
+              </Link>
               {topCategorias.map((cat, i) => (
                 <Link
                   key={cat.slug}
@@ -172,31 +178,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── Search Hub ── */}
-      <section className="py-20 md:py-28">
-        <div className="max-w-screen-xl mx-auto px-4 md:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-headline font-extrabold text-on-surface mb-4">
-            Não achou o que procura?
-          </h2>
-          <p className="text-on-surface-variant text-lg mb-10 max-w-md mx-auto">
-            Use a busca para encontrar exatamente o que precisa.
-          </p>
-          <form action="/produtos" method="get" className="max-w-xl mx-auto relative">
-            <input
-              type="search"
-              name="q"
-              placeholder="Buscar produtos, marcas, categorias..."
-              className="w-full bg-surface-container-highest rounded-full py-5 pl-7 pr-36 text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 text-base shadow-sm"
-            />
-            <button
-              type="submit"
-              className="absolute right-2 top-1/2 -translate-y-1/2 btn-primary-gradient text-on-primary px-6 py-3 rounded-full font-bold text-sm"
-            >
-              Buscar
-            </button>
-          </form>
-        </div>
-      </section>
+      {/* ── Clube Milla's ── */}
+      <ClubeMillas />
     </div>
   )
 }

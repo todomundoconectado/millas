@@ -30,10 +30,23 @@ export default function Footer() {
           ))}
         </nav>
 
-        {/* Copyright */}
-        <p className="text-xs text-on-surface-variant text-center md:text-right">
-          © {new Date().getFullYear()} Super Millas.<br className="md:hidden" /> Todos os direitos reservados.
-        </p>
+        {/* Copyright + Dev */}
+        <div className="flex flex-col items-center md:items-end gap-1">
+          <p className="text-xs text-on-surface-variant text-center md:text-right">
+            © {new Date().getFullYear()} Super Millas. Todos os direitos reservados.
+          </p>
+          <p className="text-xs text-on-surface-variant/60 text-center md:text-right">
+            Desenvolvido por{' '}
+            <a
+              href="https://todomundoconectado.com.br/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors underline underline-offset-2"
+            >
+              Todo Mundo Conectado Ltda
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   )

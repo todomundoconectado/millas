@@ -7,6 +7,7 @@ import { useCart } from '@/lib/store/cart'
 import { useState, useEffect, useRef } from 'react'
 
 const categories = [
+  { label: "Cestas Milla's", href: '/produtos?categoria=cestas-millas' },
   { label: 'Hortifruti', href: '/produtos?categoria=hortifruti' },
   { label: 'Carnes', href: '/produtos?categoria=carnes' },
   { label: 'Laticínios', href: '/produtos?categoria=laticinios' },
@@ -14,6 +15,18 @@ const categories = [
   { label: 'Bebidas', href: '/produtos?categoria=bebidas' },
   { label: 'Limpeza', href: '/produtos?categoria=limpeza' },
 ]
+
+interface Sugestao {
+  id: number
+  nome: string
+  slug: string
+  preco: string
+  imagem: string | null
+}
+
+function fmtPreco(v: string | number) {
+  return parseFloat(String(v)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -25,6 +38,11 @@ export default function Navbar() {
   const prevCount = useRef(itemCount)
   const [cartBounce, setCartBounce] = useState(false)
   const [cartTooltip, setCartTooltip] = useState(false)
+
+  const [sugestoes, setSugestoes] = useState<Sugestao[]>([])
+  const [showSugestoes, setShowSugestoes] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const desktopSearchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -42,11 +60,45 @@ export default function Navbar() {
     prevCount.current = itemCount
   }, [itemCount])
 
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (desktopSearchRef.current && !desktopSearchRef.current.contains(e.target as Node)) {
+        setShowSugestoes(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  function handleSearchChange(val: string) {
+    setSearch(val)
+    clearTimeout(debounceRef.current)
+    if (val.length < 3) {
+      setSugestoes([])
+      setShowSugestoes(false)
+      return
+    }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/busca-rapida?q=${encodeURIComponent(val)}`)
+        const data = await res.json()
+        setSugestoes(data.produtos ?? [])
+        setShowSugestoes((data.produtos ?? []).length > 0)
+      } catch {}
+    }, 250)
+  }
+
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
+    setShowSugestoes(false)
     if (search.trim()) {
       router.push(`/produtos?q=${encodeURIComponent(search.trim())}`)
     }
+  }
+
+  function handleVerTodos() {
+    setShowSugestoes(false)
+    router.push(`/produtos?q=${encodeURIComponent(search.trim())}`)
   }
 
   return (
@@ -84,25 +136,66 @@ export default function Navbar() {
               })}
             </nav>
 
-            {/* Busca desktop */}
-            <form
-              onSubmit={handleSearch}
-              className="hidden md:flex flex-1 max-w-md ml-auto relative"
-            >
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar produtos..."
-                className="w-full bg-surface-container-highest rounded-full py-2.5 pl-5 pr-14 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-              <button
-                type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full btn-primary-gradient flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined text-white text-[18px]">search</span>
-              </button>
-            </form>
+            {/* Busca desktop com autocomplete */}
+            <div ref={desktopSearchRef} className="hidden md:flex flex-1 max-w-md ml-auto relative">
+              <form onSubmit={handleSearch} className="w-full relative">
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Escape' && setShowSugestoes(false)}
+                  onFocus={() => sugestoes.length > 0 && setShowSugestoes(true)}
+                  placeholder="Buscar produtos..."
+                  className="w-full bg-surface-container-highest rounded-full py-2.5 pl-5 pr-14 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full btn-primary-gradient flex items-center justify-center"
+                >
+                  <span className="material-symbols-outlined text-white text-[18px]">search</span>
+                </button>
+              </form>
+
+              {/* Dropdown autocomplete */}
+              {showSugestoes && sugestoes.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/20 overflow-hidden z-50">
+                  {sugestoes.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onMouseDown={() => {
+                        setShowSugestoes(false)
+                        setSearch('')
+                        router.push(`/produto/${s.slug}`)
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-surface-container transition-colors"
+                    >
+                      {s.imagem ? (
+                        <img
+                          src={s.imagem}
+                          alt={s.nome}
+                          className="w-10 h-10 rounded-lg object-cover shrink-0 bg-surface-container-high"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-outline-variant text-base">inventory_2</span>
+                        </div>
+                      )}
+                      <span className="flex-1 text-sm text-on-surface line-clamp-1">{s.nome}</span>
+                      <span className="text-sm font-bold text-primary shrink-0">{fmtPreco(s.preco)}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onMouseDown={handleVerTodos}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm text-primary font-medium hover:bg-surface-container transition-colors border-t border-outline-variant/20"
+                  >
+                    Ver todos os resultados para &ldquo;{search}&rdquo;
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Ações */}
             <div className="flex items-center gap-1 ml-auto md:ml-2">
@@ -148,7 +241,7 @@ export default function Navbar() {
             <input
               type="search"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Buscar produtos..."
               className="w-full bg-surface-container-highest rounded-full py-2.5 pl-5 pr-12 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30"
             />

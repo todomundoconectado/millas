@@ -107,7 +107,11 @@ export async function listOffers(limit = 8) {
   const rows = await db
     .select()
     .from(products)
-    .where(and(eq(products.ativo, true), isNotNull(products.precoDe)))
+    .where(and(
+      eq(products.ativo, true),
+      isNotNull(products.precoDe),
+      sql`JSON_LENGTH(${products.imagens}) > 0`
+    ))
     .orderBy(desc(products.createdAt))
     .limit(limit)
   return rows.map(r => ({ ...r, imagens: parseImagens(r.imagens) }))
