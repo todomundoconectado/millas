@@ -13,6 +13,10 @@ const TRUST_ITEMS = [
   { icon: 'shopping_bag', title: 'Pedido mínimo', desc: 'R$ 100 para entrega' },
 ]
 
+function stripCatPrefix(nome: string): string {
+  return nome.replace(/^\d+[-–]\s*/, '')
+}
+
 function categoryEmoji(nome: string): string {
   const n = nome.toLowerCase()
   if (n.includes('bebida'))           return '🥤'
@@ -133,7 +137,7 @@ export default async function HomePage() {
                 >
                   <span className="text-3xl">{categoryEmoji(cat.nome)}</span>
                   <span className="font-headline font-bold text-xs text-on-surface text-center leading-snug">
-                    {cat.nome}
+                    {stripCatPrefix(cat.nome)}
                   </span>
                 </Link>
               ))}

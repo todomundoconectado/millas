@@ -10,6 +10,10 @@ interface ProdutosPageProps {
   searchParams: Promise<{ categoria?: string; q?: string; preco_max?: string; pagina?: string }>
 }
 
+function stripCatPrefix(nome: string): string {
+  return nome.replace(/^\d+[-–]\s*/, '')
+}
+
 // ── Tree helpers ───────────────────────────────────────────────────────────
 
 type CatRow = Awaited<ReturnType<typeof listCategories>>[number]
@@ -69,7 +73,7 @@ function renderCatNodes(nodes: CatNode[], active: string, depth: number): React.
           style={{ paddingLeft: indent + 'px' }}
         >
           <span className="shrink-0">{categoryEmoji(node.nome)}</span>
-          <span className="truncate leading-snug">{node.nome}</span>
+          <span className="truncate leading-snug">{stripCatPrefix(node.nome)}</span>
         </Link>
       )
     }
@@ -87,7 +91,7 @@ function renderCatNodes(nodes: CatNode[], active: string, depth: number): React.
               isActive ? 'text-primary font-bold' : 'text-on-surface-variant'
             }`}
           >
-            {node.nome}
+            {stripCatPrefix(node.nome)}
           </Link>
           <span className="text-[10px] text-outline-variant shrink-0 ml-1">▾</span>
         </summary>
@@ -117,7 +121,7 @@ export default async function ProdutosPage({ searchParams }: ProdutosPageProps) 
   const rootCats = catTree // for mobile chips
 
   const categoriaLabel = categoriaAtiva
-    ? categorias.find(c => c.slug === categoriaAtiva)?.nome ?? 'Produtos'
+    ? stripCatPrefix(categorias.find(c => c.slug === categoriaAtiva)?.nome ?? 'Produtos')
     : busca
     ? `Resultados para "${busca}"`
     : 'Todos os Produtos'
@@ -210,7 +214,7 @@ export default async function ProdutosPage({ searchParams }: ProdutosPageProps) 
                       : 'bg-surface-container text-on-surface'
                   }`}
                 >
-                  {categoryEmoji(cat.nome)} {cat.nome}
+                  {categoryEmoji(cat.nome)} {stripCatPrefix(cat.nome)}
                 </Link>
               ))}
             </div>
