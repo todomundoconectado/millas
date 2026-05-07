@@ -425,19 +425,26 @@ export async function GET(request: NextRequest) {
           if ((est.NroBaseExportacao ?? 0) > maxPointer) maxPointer = est.NroBaseExportacao
 
           const [prod] = await db
-            .select({ id: products.id, imagens: products.imagens })
+            .select({ id: products.id, imagens: products.imagens, categoriaId: products.categoriaId })
             .from(products)
             .where(eq(products.mobneId, String(est.ProdutoId)))
             .limit(1)
           if (!prod) continue
 
           const qtd: number = est.QtdeEstoque ?? 0
-          // Ativo somente se estoque >= 10 E tem imagem
-          const temImagem = (prod.imagens?.length ?? 0) > 0
-          const ativo = qtd >= 10 && temImagem
-          await db.update(products)
-            .set({ estoque: String(qtd), ativo })
-            .where(eq(products.id, prod.id))
+          const isCesta = prod.categoriaId === 737
+          if (isCesta) {
+            // Cestas: só atualiza estoque; ativo é controlado manualmente pelo admin
+            await db.update(products)
+              .set({ estoque: String(qtd) })
+              .where(eq(products.id, prod.id))
+          } else {
+            const temImagem = (prod.imagens?.length ?? 0) > 0
+            const ativo = qtd >= 10 && temImagem
+            await db.update(products)
+              .set({ estoque: String(qtd), ativo })
+              .where(eq(products.id, prod.id))
+          }
           stats.updatedStock++
         } catch (e) {
           stats.errors.push(`Estoque ${est.ProdutoId}: ${err2str(e)}`)
