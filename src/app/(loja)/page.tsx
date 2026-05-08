@@ -50,37 +50,29 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col gap-0">
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden bg-primary min-h-screen flex items-center">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-primary-fixed blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-primary-fixed blur-3xl" />
-        </div>
-
-        <div className="relative max-w-screen-xl mx-auto px-4 md:px-8 py-16 md:py-24 w-full">
-          <div className="max-w-2xl">
-            <h1 className="text-4xl md:text-6xl font-headline font-extrabold text-on-primary leading-tight mb-6">
-              Tudo que você precisa,{' '}
-              <span className="text-primary-fixed">na palma da mão</span>
-            </h1>
-            <p className="text-on-primary/80 text-lg mb-8 max-w-md">
-              Qualidade e tradição na cidade de Matão. Agora online para você e toda sua família, vem pro Milla&apos;s!
-            </p>
-            <div className="flex gap-3 flex-wrap">
-              <Link
-                href="/produtos"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-primary-fixed text-on-primary-fixed font-bold text-base hover:opacity-90 transition-opacity shadow-lg shadow-on-primary-fixed/20"
-              >
-                <span className="material-symbols-outlined text-[20px]">storefront</span>
-                Ver todos os produtos
-              </Link>
-              <Link
-                href="/produtos?categoria=2-cestas"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-on-primary/10 text-on-primary font-bold text-base hover:bg-on-primary/20 transition-colors border border-on-primary/20"
-              >
-                Cestas Milla&apos;s
-              </Link>
-            </div>
-          </div>
+      <section className="relative overflow-hidden w-full" style={{ aspectRatio: '1280/503', minHeight: '320px', maxHeight: '90vh' }}>
+        <Image
+          src="/banner-home.png"
+          alt="Super Milla's — Tudo que você precisa, na palma da mão"
+          fill
+          className="object-cover object-center"
+          priority
+        />
+        {/* Botões posicionados abaixo da frase no banner */}
+        <div className="absolute left-[4%] md:left-[6%] bottom-[8%] md:bottom-[12%] flex gap-2 md:gap-3 flex-wrap">
+          <Link
+            href="/produtos"
+            className="inline-flex items-center gap-2 px-5 md:px-8 py-2.5 md:py-3.5 rounded-full bg-primary text-on-primary font-bold text-sm md:text-base hover:opacity-90 transition-opacity shadow-lg"
+          >
+            <span className="material-symbols-outlined text-[18px] md:text-[20px]">storefront</span>
+            Ver todos os produtos
+          </Link>
+          <Link
+            href="/produtos?categoria=2-cestas"
+            className="inline-flex items-center gap-2 px-5 md:px-8 py-2.5 md:py-3.5 rounded-full bg-white/20 backdrop-blur-sm text-white font-bold text-sm md:text-base hover:bg-white/30 transition-colors border border-white/40"
+          >
+            Cestas Milla&apos;s
+          </Link>
         </div>
       </section>
 
