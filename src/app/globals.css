@@ -92,10 +92,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Glass Nav ── */
 .glass-nav {
-  background: rgba(249, 249, 249, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(191, 202, 186, 0.2);
+  background: rgb(249, 249, 249);
+  border-bottom: 1px solid rgba(191, 202, 186, 0.3);
 }
 
 /* ── Gradiente CTA primário ── */
